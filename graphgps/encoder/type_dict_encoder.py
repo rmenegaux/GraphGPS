@@ -1,4 +1,5 @@
 import torch
+from torch_geometric.utils import to_dense_adj
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.register import (register_node_encoder,
                                                register_edge_encoder)
@@ -113,4 +114,6 @@ class TypeDictEdgeEncoder(torch.nn.Module):
 
     def forward(self, batch):
         batch.edge_attr = self.encoder(batch.edge_attr)
+        
+
         return batch
