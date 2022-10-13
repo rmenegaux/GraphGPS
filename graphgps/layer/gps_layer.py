@@ -11,6 +11,7 @@ from torch_geometric.utils import to_dense_batch
 from graphgps.layer.gatedgcn_layer import GatedGCNLayer
 from graphgps.layer.gine_conv_layer import GINEConvESLapPE
 from graphgps.layer.bigbird_layer import SingleBigBirdLayer
+from graphgps.layer.graphit_layer import MultiHeadAttentionLayer
 
 
 class GPSLayer(nn.Module):
@@ -93,6 +94,10 @@ class GPSLayer(nn.Module):
             bigbird_cfg.n_heads = num_heads
             bigbird_cfg.dropout = dropout
             self.self_attn = SingleBigBirdLayer(bigbird_cfg)
+        elif global_model_type == "GraphiT":
+            self.self_attn = MultiHeadAttentionLayer(
+                dim_h, dim_h, dim_h//num_heads, num_heads,
+                attn_dropout=self.attn_dropout)
         else:
             raise ValueError(f"Unsupported global x-former model: "
                              f"{global_model_type}")
@@ -172,6 +177,8 @@ class GPSLayer(nn.Module):
                 h_attn = self.self_attn(h_dense, mask=mask)[mask]
             elif self.global_model_type == 'BigBird':
                 h_attn = self.self_attn(h_dense, attention_mask=mask)
+            elif self.global_model_type == 'GraphiT':
+                h_attn = self.self_attn(h_dense, mask=mask)[mask]
             else:
                 raise RuntimeError(f"Unexpected {self.global_model_type}")
 
