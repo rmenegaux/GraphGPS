@@ -128,7 +128,21 @@ if __name__ == '__main__':
         cfg.seed = seed
         cfg.run_id = run_id
         seed_everything(cfg.seed)
-        auto_select_device()
+        # auto_select_device()
+        # FIXME: hardcoding the device to avoid errors
+        # ---------------------------------------------
+        cfg.device = 'cuda:0'
+        use_gpu = True
+        gpu_id = 0
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+        if torch.cuda.is_available() and use_gpu:
+            logging.info('cuda available with GPU: {}'.format(torch.cuda.get_device_name(0)))
+            device = torch.device("cuda")
+        else:
+            logging.info('cuda not available')
+            device = torch.device("cpu")
+        # ---------------------------------------------
         if cfg.pretrained.dir:
             cfg = load_pretrained_model_cfg(cfg)
         logging.info(f"[*] Run ID {run_id}: seed={cfg.seed}, "

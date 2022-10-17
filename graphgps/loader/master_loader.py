@@ -23,7 +23,8 @@ from graphgps.loader.split_generator import (prepare_splits,
 from graphgps.transform.posenc_stats import compute_posenc_stats
 from graphgps.transform.transforms import (pre_transform_in_memory,
                                            typecast_x, concat_x_and_pos,
-                                           clip_graphs_to_size)
+                                           clip_graphs_to_size,
+                                           add_rings)
 
 
 def log_loaded_dataset(dataset, format, name):
@@ -196,6 +197,22 @@ def load_dataset_master(format, name, dataset_dir):
                                         pe_types=pe_enabled_list,
                                         is_undirected=is_undirected,
                                         cfg=cfg),
+                                show_progress=True
+                                )
+        elapsed = time.perf_counter() - start
+        timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
+                  + f'{elapsed:.2f}'[-3:]
+        logging.info(f"Done! Took {timestr}")
+
+    # Add ring information for molecular datasets
+    if not hasattr(cfg.dataset, 'rings'):
+        cfg.dataset.rings = False
+    if cfg.dataset.rings == True:
+        start = time.perf_counter()
+        logging.info(f"Adding rings up to size: "
+                     f"{cfg.dataset.rings_max_length} for all graphs...")
+        pre_transform_in_memory(dataset,
+                                partial(add_rings, config=cfg.dataset),
                                 show_progress=True
                                 )
         elapsed = time.perf_counter() - start

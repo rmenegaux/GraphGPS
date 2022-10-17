@@ -87,7 +87,7 @@ class MultiHeadAttentionLayer(nn.Module):
             if e is not None:
                 E2 = self.E2(e).view(n_batch, num_nodes, num_nodes, self.num_heads, self.out_dim)
                 scores = scores + E2
-                scores *= float(2) ** -0.5 # [n_batch, num_nodes, num_nodes, num_heads, out_dim]
+                # scores *= float(2) ** -0.5 # [n_batch, num_nodes, num_nodes, num_heads, out_dim]
             else:
                 scores = scores.expand(n_batch, num_nodes, num_nodes, self.num_heads, self.out_dim)
         else:

@@ -90,10 +90,11 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
         kernel_param = cfg.posenc_RWSE.kernel
         if len(kernel_param.times) == 0:
             raise ValueError("List of kernel times required for RWSE")
-        rw_landing = get_rw_landing_probs(ksteps=kernel_param.times,
+        rw_landing, rw_landing_all = get_rw_landing_probs(ksteps=kernel_param.times,
                                           edge_index=data.edge_index,
                                           num_nodes=N)
         data.pestat_RWSE = rw_landing
+        data.edge_RWSE = rw_landing_all
 
     # Heat Kernels.
     if 'HKdiagSE' in pe_types or 'HKfullPE' in pe_types:
@@ -205,12 +206,14 @@ def get_rw_landing_probs(ksteps, edge_index, edge_weight=None,
         # P = D^-1 * A
         P = torch.diag(deg_inv) @ to_dense_adj(edge_index, max_num_nodes=num_nodes)  # 1 x (Num nodes) x (Num nodes)
     rws = []
+    rws_all = []
     if ksteps == list(range(min(ksteps), max(ksteps) + 1)):
         # Efficient way if ksteps are a consecutive sequence (most of the time the case)
         Pk = P.clone().detach().matrix_power(min(ksteps))
         for k in range(min(ksteps), max(ksteps) + 1):
             rws.append(torch.diagonal(Pk, dim1=-2, dim2=-1) * \
                        (k ** (space_dim / 2)))
+            rws_all.append(Pk.view(1, num_nodes*num_nodes))
             Pk = Pk @ P
     else:
         # Explicitly raising P to power k for each k \in ksteps.
@@ -218,8 +221,9 @@ def get_rw_landing_probs(ksteps, edge_index, edge_weight=None,
             rws.append(torch.diagonal(P.matrix_power(k), dim1=-2, dim2=-1) * \
                        (k ** (space_dim / 2)))
     rw_landing = torch.cat(rws, dim=0).transpose(0, 1)  # (Num nodes) x (K steps)
+    rw_landing_all = torch.cat(rws_all, dim=0).transpose(0, 1)  # (Num nodes ^2) x (K steps)
 
-    return rw_landing
+    return rw_landing, rw_landing_all
 
 
 def get_heat_kernels_diag(evects, evals, kernel_times=[], space_dim=0):
