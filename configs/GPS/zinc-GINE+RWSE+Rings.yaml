@@ -1,4 +1,4 @@
-out_dir: tests/results
+out_dir: results
 metric_best: mae
 metric_agg: argmin
 wandb:
@@ -39,7 +39,7 @@ model:
   edge_decoding: dot
   graph_pooling: add
 gt:
-  layer_type: None+GraphiT  # CustomGatedGCN+Performer
+  layer_type: GINE+None  # CustomGatedGCN+Performer
   layers: 10
   n_heads: 4
   dim_hidden: 64  # `gt.dim_hidden` must match `gnn.dim_inner`

@@ -14,3 +14,8 @@ def dataset_cfg(cfg):
 
     # VOC/COCO Superpixels dataset version based on SLIC compactness parameter.
     cfg.dataset.slic_compactness = 10
+
+    # Whether to add ring information per graph
+    cfg.dataset.rings = False
+    cfg.dataset.rings_max_length = 6
+    cfg.dataset.rings_coalesce_edges = False

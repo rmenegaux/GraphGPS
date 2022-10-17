@@ -1,4 +1,4 @@
-out_dir: tests/results
+out_dir: results
 metric_best: mae
 metric_agg: argmin
 wandb:
@@ -15,7 +15,7 @@ dataset:
   node_encoder_num_types: 28
   node_encoder_bn: False
   edge_encoder: True
-  edge_encoder_name: TypeDictEdge
+  edge_encoder_name: TypeDictEdge+RWSEEdge
   edge_encoder_num_types: 4
   edge_encoder_bn: False
   rings: True
@@ -39,7 +39,7 @@ model:
   edge_decoding: dot
   graph_pooling: add
 gt:
-  layer_type: None+GraphiT  # CustomGatedGCN+Performer
+  layer_type: GINE+None  # CustomGatedGCN+Performer
   layers: 10
   n_heads: 4
   dim_hidden: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
