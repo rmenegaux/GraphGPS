@@ -108,7 +108,7 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
         else:
             wandb_name = cfg.wandb.name
         run = wandb.init(entity=cfg.wandb.entity, project=cfg.wandb.project,
-                         name=wandb_name)
+                name=wandb_name, mode=cfg.wandb.mode)
         run.config.update(cfg_to_dict(cfg))
 
     num_splits = len(loggers)
