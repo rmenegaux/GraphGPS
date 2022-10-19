@@ -12,6 +12,7 @@ source activate graphgps
 cd /home/rmenegau/GraphGPS
 # config="configs/GPS/zinc-GPS+RWSE-graphiT.yaml"
 # config="configs/GPS/zinc-GINE+RWSE+Rings.yaml"
-config="configs/GPS/zinc-GPS+RWSE-graphiT-Rings-RWSEEdge.yaml"
+# config="configs/GPS/zinc-GPS+RWSE-graphiT-Rings-RWSEEdge.yaml"
+config="configs/GPS/ogbg-molhiv-GPS+RWSE.yaml"
 python main.py --cfg $config  wandb.use True
 # OAR -p host='gpuhost2' OR host='gpuhost15' OR host='gpuhost17'OR host='gpuhost20' OR host='gpuhost28'

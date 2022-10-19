@@ -98,6 +98,7 @@ def add_rings(data, config):
     if config.rings_coalesce_edges == True:
         data.edge_index = torch.cat([data.edge_index, data.ring_index], dim=1)
         # FIXME: This should be done on a per-dataset basis. Ex if edge_attr is multi-dimensional...
+        # Shady stuff right here
         ring_attr = data.edge_attr.new_zeros(len(ring_connections))
         ring_attr += config.edge_encoder_num_types
         data.edge_attr = torch.cat([data.edge_attr, ring_attr], dim=0)
