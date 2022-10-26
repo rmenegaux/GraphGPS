@@ -10,7 +10,7 @@ from torch_geometric.graphgym.register import register_train
 from torch_geometric.graphgym.utils.epoch import is_eval_epoch, is_ckpt_epoch
 
 from graphgps.loss.subtoken_prediction_loss import subtoken_cross_entropy
-from graphgps.utils import cfg_to_dict, flatten_dict, make_wandb_name
+from graphgps.utils import cfg_to_dict, flatten_dict, make_wandb_name, make_wandb_dir
 
 
 def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation):
@@ -108,7 +108,7 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
         else:
             wandb_name = cfg.wandb.name
         run = wandb.init(entity=cfg.wandb.entity, project=cfg.wandb.project,
-                name=wandb_name, mode=cfg.wandb.mode)
+                name=wandb_name, mode=cfg.wandb.mode, dir=make_wandb_dir(cfg))
         run.config.update(cfg_to_dict(cfg))
 
     num_splits = len(loggers)

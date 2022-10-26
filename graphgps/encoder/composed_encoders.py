@@ -152,14 +152,14 @@ from graphgps.encoder.linear_edge_encoder import LinearEdgeEncoder
 def concat_edge_encoders(encoder_classes, pe_enc_names):
     """
     A factory that creates a new Encoder class that concatenates functionality
-    of the given list of two or three Encoder classes. First Encoder is expected
-    to be a dataset-specific encoder, and the rest PE Encoders.
+    of the given list of two Encoder classes. First Encoder is expected
+    to be a dataset-specific encoder, and the other a PE Encoder.
 
     Args:
         encoder_classes: List of node encoder classes
         pe_enc_names: List of PE embedding Encoder names, used to query a dict
             with their desired PE embedding dims. That dict can only be created
-            during the runtime, once the config is loaded.
+            during runtime, once the config is loaded.
 
     Returns:
         new edge encoder class
@@ -176,9 +176,12 @@ def concat_edge_encoders(encoder_classes, pe_enc_names):
             super().__init__()
             
             # Only GraphiT layer uses dense edge features.
-            layer_type = cfg.gt.layer_type.split('+')[1]
-            self.add_dense_edge_features = (layer_type == 'GraphiT')
+            transformer_layer = cfg.gt.layer_type.split('+')[1]
+            self.add_dense_edge_features = (transformer_layer == 'GraphiT')
             # Whether to add special features for bonds that are part of a ring.
+            # if cfg.dataset.rings_coalesce_edges == True, 
+            # these features are already taken into account in the `edge_attr`,
+            # and do not need to be adressed here
             add_rings = (cfg.dataset.rings == True) and (cfg.dataset.rings_coalesce_edges == False)
         
             type_dim = dim_emb if self.enc_pe_cls is None else (dim_emb // 2)

@@ -146,6 +146,7 @@ class RWSEEdgeEncoder(torch.nn.Module):
         batch_idx, row, col = get_dense_indices_from_sparse(batch.edge_index, batch.batch)
         batch.edge_attr = batched_edge_features[batch_idx, row, col]
         if self.add_dense_edge_features:
+            # Maybe directly concatenate this instead, as for NodePE?
             batch.edge_dense = batched_edge_features
 
         return batch
@@ -156,7 +157,7 @@ class DenseEdgeEncoder(torch.nn.Module):
     Creates dense edge features `batch.edge_dense` of size 
     `(n_batch, batch_nodes, batch_nodes, emb_dim)` from `batch.edge_attr`
 
-    Fills edge features by adding a learnable vector of size `emb_dim`
+    Fills missing edge features by adding a learnable vector of size `emb_dim`
     to every disconnected nodes (i, j), and another one to the diagonal (i, i)
 
     `input_batch.edge_attr` should be of compatible last dimension `emb_dim`
@@ -177,7 +178,7 @@ class DenseEdgeEncoder(torch.nn.Module):
         This gives a non-zero embedding to padding edges, should be dealt with in the model
         '''
         if not hasattr(batch, 'edge_dense'):
-            batch.edge_dense = to_dense_adj(batch.edge_index, batch=batch.batch, edge_attr=batch.edge_attr + 1)
+            batch.edge_dense = to_dense_adj(batch.edge_index, batch=batch.batch, edge_attr=batch.edge_attr)
         
         A_dense = get_dense_edge_types(batch)
         batch.edge_dense += self.encoder(A_dense)
@@ -205,6 +206,7 @@ class RingEdgeEncoder(torch.nn.Module):
         ring_dense = to_dense_adj(batch.ring_index, batch=batch.batch).long()
         # FIXME: For sparse version:
         # Should check that ring_index is indexed in the same manner as edge_index after batching
+        # Miraculously seems to be the case.
         # ring_index = set(batch.ring_index)
         # edge_mask = torch.Tensor([edge in ring_index for edge in batch.edge_index],
         #                          dtype=batch.edge_index.dtype, device=batch.edge_index.device)
