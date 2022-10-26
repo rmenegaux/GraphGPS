@@ -104,7 +104,29 @@ def cfg_to_dict(cfg_node, key_list=[]):
 
 
 def make_wandb_name(cfg):
-    # Format dataset name.
+    dataset_name = format_dataset_name(cfg)
+    # Format model name.
+    model_name = cfg.model.type
+    if cfg.model.type in ['gnn', 'custom_gnn']:
+        model_name += f".{cfg.gnn.layer_type}"
+    elif cfg.model.type == 'GPSModel':
+        model_name = f"GPS.{cfg.gt.layer_type}"
+    model_name += f".{cfg.name_tag}" if cfg.name_tag else ""
+    # Compose wandb run name.
+    name = f"{dataset_name}.{model_name}.r{cfg.run_id}"
+    return name
+
+
+def make_wandb_dir(cfg):
+    '''
+    Directory where wandb logs will be stored
+    '''
+    dataset_name = format_dataset_name(cfg)
+    dir_name = f"./wandb/{dataset_name}"
+    return dir_name
+
+
+def format_dataset_name(cfg):
     dataset_name = cfg.dataset.format
     if dataset_name.startswith('OGB'):
         dataset_name = dataset_name[3:]
@@ -119,13 +141,5 @@ def make_wandb_name(cfg):
             dataset_name += 'LDP'
         else:
             dataset_name += cfg.dataset.name
-    # Format model name.
-    model_name = cfg.model.type
-    if cfg.model.type in ['gnn', 'custom_gnn']:
-        model_name += f".{cfg.gnn.layer_type}"
-    elif cfg.model.type == 'GPSModel':
-        model_name = f"GPS.{cfg.gt.layer_type}"
-    model_name += f".{cfg.name_tag}" if cfg.name_tag else ""
-    # Compose wandb run name.
-    name = f"{dataset_name}.{model_name}.r{cfg.run_id}"
-    return name
+    return dataset_name
+
