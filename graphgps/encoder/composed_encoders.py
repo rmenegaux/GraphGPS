@@ -145,7 +145,8 @@ from torch_geometric.graphgym.models.encoder import BondEncoder
 from torch_geometric.graphgym.register import register_edge_encoder
 
 from graphgps.encoder.type_dict_encoder import (TypeDictEdgeEncoder, 
-    RWSEEdgeEncoder, RingEdgeEncoder, DenseEdgeEncoder)
+    RWSEEdgeEncoder,)
+    # RingEdgeEncoder, DenseEdgeEncoder)
 from graphgps.encoder.linear_edge_encoder import LinearEdgeEncoder
 
 

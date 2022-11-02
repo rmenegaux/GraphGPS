@@ -1,6 +1,5 @@
 import torch
-from torch_scatter import scatter
-from torch_geometric.utils import to_dense_adj, add_self_loops
+from torch_geometric.utils import to_dense_adj
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.register import (register_node_encoder,
                                                register_edge_encoder)
@@ -105,8 +104,8 @@ class TypeDictEdgeEncoder(torch.nn.Module):
     def __init__(self, emb_dim):
         super().__init__()
 
-        num_types = cfg.dataset.edge_encoder_num_types
-        if cfg.dataset.rings == True and cfg.dataset.rings_coalesce_edges == True:
+        num_types = cfg.dataset.edge_encoder_num_types + 1 # Add 1 for the eventual self-loops
+        if cfg.dataset.rings == True:
             # Double each edge type: part of a ring or not
             num_types += cfg.dataset.edge_encoder_num_types
         if num_types < 1:
@@ -117,6 +116,8 @@ class TypeDictEdgeEncoder(torch.nn.Module):
         # torch.nn.init.xavier_uniform_(self.encoder.weight.data)
 
     def forward(self, batch):
+        A_dense = get_dense_edge_types(batch)
+        batch.edge_dense = self.encoder(A_dense)
         batch.edge_attr = self.encoder(batch.edge_attr)
 
         return batch
@@ -124,11 +125,10 @@ class TypeDictEdgeEncoder(torch.nn.Module):
 
 @register_edge_encoder('RWSEEdge')
 class RWSEEdgeEncoder(torch.nn.Module):
-    def __init__(self, emb_dim, dense=False):
+    def __init__(self, emb_dim):
         super().__init__()
 
         edge_pe_in_dim = len(cfg.posenc_RWSE.kernel.times) # Size of the kernel-based PE embedding
-        self.add_dense_edge_features = dense
 
         self.encoder = torch.nn.Linear(edge_pe_in_dim, emb_dim) 
         # torch.nn.init.xavier_uniform_(self.encoder.weight.data)
@@ -138,83 +138,14 @@ class RWSEEdgeEncoder(torch.nn.Module):
         Ideally this step should be done in the data loading, but the torch geometric DataLoader
         forces us to flatten the dense edge feature matrices
         '''
-        # First reshape the edge features into (n_batch, max_nodes, max_nodes, edge_dim)
         batched_edge_features = reshape_flattened_adj(batch.edge_RWSE, batch.batch)
         del batch.edge_RWSE # This is the largest tensor in the batch, deleting it to save space?
-        batched_edge_features = self.encoder(batched_edge_features)
-        # For the sparse edge_attr we keep the original edges and do not add new ones
-        batch_idx, row, col = get_dense_indices_from_sparse(batch.edge_index, batch.batch)
-        batch.edge_attr = batched_edge_features[batch_idx, row, col]
-        if self.add_dense_edge_features:
-            batch.edge_dense = batched_edge_features
+        batch.edge_dense = self.encoder(batched_edge_features)
+        # Need to add a sparse version as well: (Not implemented for now)
+        # batch.edge_attr = self.encoder(batch.edge_RWSE)
 
         return batch
 
-@register_edge_encoder('DenseEdge')
-class DenseEdgeEncoder(torch.nn.Module):
-    '''
-    Creates dense edge features `batch.edge_dense` of size 
-    `(n_batch, batch_nodes, batch_nodes, emb_dim)` from `batch.edge_attr`
-
-    Fills edge features by adding a learnable vector of size `emb_dim`
-    to every disconnected nodes (i, j), and another one to the diagonal (i, i)
-
-    `input_batch.edge_attr` should be of compatible last dimension `emb_dim`
-    '''
-    def __init__(self, emb_dim):
-        super().__init__()
-
-        self.encoder = torch.nn.Embedding(num_embeddings=3, embedding_dim=emb_dim, padding_idx=0) 
-        # torch.nn.init.xavier_uniform_(self.encoder.weight.data)
-
-    def forward(self, batch):
-        '''
-        Create a dense edge features matrix `batch.edge_dense`,
-        E_ij = edge_attr[i, j] if (i, j) are neighbors
-               embedding_0 if i=j
-               embedding_1 else
-        FIXME: Warning, 
-        This gives a non-zero embedding to padding edges, should be dealt with in the model
-        '''
-        if not hasattr(batch, 'edge_dense'):
-            batch.edge_dense = to_dense_adj(batch.edge_index, batch=batch.batch, edge_attr=batch.edge_attr + 1)
-        
-        A_dense = get_dense_edge_types(batch)
-        batch.edge_dense += self.encoder(A_dense)
-
-        return batch
-
-@register_edge_encoder('RingEdge')
-class RingEdgeEncoder(torch.nn.Module):
-    '''
-    Transforms dense edge features by adding a vector to every pair of nodes (i, j)
-    that are in a ring
-    '''
-    def __init__(self, emb_dim):
-        super().__init__()
-
-        self.encoder = torch.nn.Embedding(num_embeddings=2, embedding_dim=emb_dim, padding_idx=0) 
-        # torch.nn.init.xavier_uniform_(self.encoder.weight.data)
-
-    def forward(self, batch):
-        '''
-        FIXME: Warning, 
-        This gives a non-zero embedding to padding edges, should be dealt with in the model
-        '''
-        # ring_attr = torch.ones_like(batch.ring_index[0])
-        ring_dense = to_dense_adj(batch.ring_index, batch=batch.batch).long()
-        # FIXME: For sparse version:
-        # Should check that ring_index is indexed in the same manner as edge_index after batching
-        # ring_index = set(batch.ring_index)
-        # edge_mask = torch.Tensor([edge in ring_index for edge in batch.edge_index],
-        #                          dtype=batch.edge_index.dtype, device=batch.edge_index.device)
-        # batch.edge_attr += self.encoder(edge_mask)
-
-        batch.edge_dense += self.encoder(ring_dense)
-
-        return batch
-
-# OGB ring and OGB Ring RWSE
 @register_edge_encoder('TypeDictEdge+RWSEEdge')
 class TypeRWSEEdgeEncoder(torch.nn.Module):
     def __init__(self, emb_dim):
@@ -226,42 +157,23 @@ class TypeRWSEEdgeEncoder(torch.nn.Module):
     def forward(self, batch):
         batch = self.type_encoder(batch)
         edge_types_dense = batch.edge_dense
-        edge_types_sparse = batch.edge_attr
         batch = self.pe_encoder(batch)
         batch.edge_dense = torch.cat([edge_types_dense, batch.edge_dense], dim=-1)
-        batch.edge_attr = torch.cat([edge_types_sparse, batch.edge_attr], dim=-1)
+        # Need to add a sparse version as well: (Not implemented for now)
+        # batch.edge_attr = self.encoder(batch.edge_RWSE)
 
         return batch
 
-def get_dense_edge_types(batch):
+def get_dense_edge_types(batch, fill_diagonal=1):
     '''
-    Returns a dense complementary adjacency matrix of `batch`,
-    of size `(n_batch, batch_nodes, batch_nodes, 1)`
-    Matrix A_ij = 0 if (i,j) are connected;
-                  1 if i=j;
-                  2 otherwise
-    FIXME: Should differentiate padding and edges (both have same value as 
-           pyG `to_dense_adj` returns 0 for both)
+    Returns the dense adjacency matrix of batch,
+    with a special edge type of `fill_diagonal` for the self-loops.
     '''
-    edge_attr = 2 * torch.ones_like(batch.edge_index[0])
-    edge_index, edge_attr = add_self_loops(batch.edge_index, edge_attr, fill_value=1)
-    # to_dense_adj returns a float tensor even when edge_attr is int...
-    A_dense = 2 - to_dense_adj(edge_index, batch=batch.batch, edge_attr=edge_attr).long()
+    A_dense = to_dense_adj(batch.edge_index, batch=batch.batch, edge_attr=batch.edge_attr + 1)
+    for i in range(A_dense.size(0)):
+        A_dense[i].fill_diagonal_(fill_diagonal)
 
     return A_dense
-
-
-def get_dense_indices_from_sparse(edge_index, batch):
-    batch_size = int(batch.max()) + 1 if batch.numel() > 0 else 1
-    one = batch.new_ones(batch.size(0))
-    num_nodes = scatter(one, batch, dim=0, dim_size=batch_size, reduce='add')
-    cum_nodes = torch.cat([batch.new_zeros(1), num_nodes.cumsum(dim=0)])
-
-    idx0 = batch[edge_index[0]]
-    idx1 = edge_index[0] - cum_nodes[batch][edge_index[0]]
-    idx2 = edge_index[1] - cum_nodes[batch][edge_index[1]]
-
-    return idx0, idx1, idx2
 
 
 def reshape_flattened_adj(edge_features, batch):
