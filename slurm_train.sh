@@ -27,8 +27,8 @@ cd $WORK/GraphGPS
 #config=$1
 # config="configs/GPS/zinc-GPS+RWSE-graphiT-Rings-RWSEEdge.yaml"
 # config="configs/GPS/ogbg-molhiv-GPS+RWSE.yaml"
-#config="configs/GPS/zinc-GPS+RWSE-graphiT.yaml"
-config="configs/GPS/zinc-GPS+RWSE-graphiT_Ringsold.yaml"
+config="configs/GPS/zinc-GPS+RWSE-graphiT.yaml"
+#config="configs/GPS/zinc-GPS+RWSE-graphiT_Ringsold.yaml"
 # config="configs/GPS/ogbg-molhiv-GPS+RWSE+Rings-GraphiT.yaml"
 echo "$config"
-python main.py --cfg $config wandb.use True wandb.mode "offline"
+python main.py --cfg $config wandb.use True wandb.mode "offline" seed 42
