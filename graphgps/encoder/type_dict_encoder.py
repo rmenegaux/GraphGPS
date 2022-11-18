@@ -158,7 +158,7 @@ class DenseEdgeEncoder(torch.nn.Module):
     `(n_batch, batch_nodes, batch_nodes, emb_dim)` from `batch.edge_attr`
 
     Fills missing edge features by adding a learnable vector of size `emb_dim`
-    to every disconnected nodes (i, j), and another one to the diagonal (i, i)
+    to every pair of disconnected nodes (i, j), and another one to the diagonal (i, i)
 
     `input_batch.edge_attr` should be of compatible last dimension `emb_dim`
     '''
@@ -172,14 +172,11 @@ class DenseEdgeEncoder(torch.nn.Module):
         '''
         Create a dense edge features matrix `batch.edge_dense`,
         E_ij = edge_attr[i, j] if (i, j) are neighbors
-               embedding_0 if i=j
-               embedding_1 else
-        FIXME: Warning, 
-        This gives a non-zero embedding to padding edges, should be dealt with in the model
+               embedding_1 if i=j
+               embedding_2 else
         '''
         if not hasattr(batch, 'edge_dense'):
             batch.edge_dense = to_dense_adj(batch.edge_index, batch=batch.batch, edge_attr=batch.edge_attr)
-        
         A_dense = get_dense_edge_types(batch)
         batch.edge_dense += self.encoder(A_dense)
 
@@ -199,8 +196,6 @@ class RingEdgeEncoder(torch.nn.Module):
 
     def forward(self, batch):
         '''
-        FIXME: Warning, 
-        This gives a non-zero embedding to padding edges, should be dealt with in the model
         '''
         # ring_attr = torch.ones_like(batch.ring_index[0])
         ring_dense = to_dense_adj(batch.ring_index, batch=batch.batch).long()
