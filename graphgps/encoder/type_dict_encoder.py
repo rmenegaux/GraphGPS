@@ -1,5 +1,5 @@
 import torch
-from torch_geometric.utils import to_dense_adj
+from torch_geometric.utils import to_dense_adj, add_self_loops
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.register import (register_node_encoder,
                                                register_edge_encoder)
@@ -169,9 +169,11 @@ def get_dense_edge_types(batch, fill_diagonal=1):
     Returns the dense adjacency matrix of batch,
     with a special edge type of `fill_diagonal` for the self-loops.
     '''
-    A_dense = to_dense_adj(batch.edge_index, batch=batch.batch, edge_attr=batch.edge_attr + 1)
-    for i in range(A_dense.size(0)):
-        A_dense[i].fill_diagonal_(fill_diagonal)
+    edge_index, edge_attr = add_self_loops(batch.edge_index, batch.edge_attr + 1, fill_value=fill_diagonal)
+    A_dense = to_dense_adj(edge_index, batch=batch.batch, edge_attr=edge_attr)
+    #A_dense = to_dense_adj(batch.edge_index, batch=batch.batch, edge_attr=batch.edge_attr + 1)
+    #for i in range(A_dense.size(0)):
+    #    A_dense[i].fill_diagonal_(fill_diagonal)
 
     return A_dense
 
