@@ -9,7 +9,7 @@ GPUID=0
 export PATH="/scratch/curan/rmenegau/miniconda3/bin:$PATH"
 # source activate cwn_tensorboard
 source activate graphgps
-cd /home/rmenegau/GraphGPS
+cd /scratch/curan/rmenegau/GraphGPS
 # config="configs/GPS/zinc-GPS+RWSE-graphiT.yaml"
 # config="configs/GPS/zinc-GINE+RWSE+Rings.yaml"
 # config="configs/GPS/zinc-GPS+RWSE-graphiT-Rings-RWSEEdge.yaml"
