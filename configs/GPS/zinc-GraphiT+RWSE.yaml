@@ -18,12 +18,9 @@ dataset:
   edge_encoder_name: TypeDictEdge+RWSE
   edge_encoder_num_types: 4
   edge_encoder_bn: False
-<<<<<<< HEAD:configs/GPS/zinc-GPS+RWSE-graphiT.yaml
-  rings: True
+  rings: False
   rings_max_length: 18
   rings_coalesce_edges: False
-=======
->>>>>>> 52ff5a3... zinc experiment scripts:configs/GPS/zinc-GraphiT+RWSE.yaml
 posenc_RWSE:
   enable: True
   kernel:
