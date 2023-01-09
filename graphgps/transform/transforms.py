@@ -95,13 +95,17 @@ def add_rings(data, config):
     zipped_connections = list(zip(*ring_connections)) if len(ring_connections) > 0 else [(), ()]
     data.ring_index[0], data.ring_index[1] = torch.Tensor(zipped_connections[0]), torch.Tensor(zipped_connections[1])
     # Create new edges for each ring connection
+    # aka merge ring_index into edge_index
     if config.rings_coalesce_edges == True:
         data.edge_index = torch.cat([data.edge_index, data.ring_index], dim=1)
         # FIXME: This should be done on a per-dataset basis. Ex if edge_attr is multi-dimensional...
         # Shady stuff right here
+        # In the case of multi-dimensional edge_attr, could add a column of 0s to existing edge_attr,
+        # and set ring_attr to (0, ..., 0, 1)
         ring_attr = data.edge_attr.new_zeros(len(ring_connections))
         ring_attr += config.edge_encoder_num_types
         data.edge_attr = torch.cat([data.edge_attr, ring_attr], dim=0)
+        # Merge duplicate entries, by summing their edge_attr.
         data.edge_index, data.edge_attr = coalesce(data.edge_index, data.edge_attr)
     return data
 
