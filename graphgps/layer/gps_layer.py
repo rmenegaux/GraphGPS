@@ -11,7 +11,7 @@ from torch_geometric.utils import to_dense_batch
 from graphgps.layer.gatedgcn_layer import GatedGCNLayer
 from graphgps.layer.gine_conv_layer import GINEConvESLapPE
 from graphgps.layer.bigbird_layer import SingleBigBirdLayer
-from graphgps.layer.graphit_layer import MultiHeadAttentionLayer
+from graphgps.layer.graphit_layer import GraphiT_Layer
 
 
 class GPSLayer(nn.Module):
@@ -95,7 +95,7 @@ class GPSLayer(nn.Module):
             bigbird_cfg.dropout = dropout
             self.self_attn = SingleBigBirdLayer(bigbird_cfg)
         elif global_model_type == "GraphiT":
-            self.self_attn = MultiHeadAttentionLayer(
+            self.self_attn = GraphiT_Layer(
                 dim_h, dim_h, dim_h//num_heads, num_heads,
                 attn_dropout=self.attn_dropout)
             self.linear_attn = nn.Linear(dim_h, dim_h)
@@ -180,7 +180,7 @@ class GPSLayer(nn.Module):
                 h_attn = self.self_attn(h_dense, attention_mask=mask)
             elif self.global_model_type == 'GraphiT':
                 edge_dense = getattr(batch, 'edge_dense', None)
-                h_attn = self.self_attn(h_dense, e=edge_dense, mask=mask)[mask]
+                h_attn = self.self_attn(h_dense, edge_features=edge_dense, mask=mask)[mask]
                 h_attn = self.linear_attn(h_attn)
             else:
                 raise RuntimeError(f"Unexpected {self.global_model_type}")

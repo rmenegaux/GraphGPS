@@ -56,7 +56,7 @@ class GPSModel(torch.nn.Module):
     def __init__(self, dim_in, dim_out):
         super().__init__()
         self.encoder = FeatureEncoder(dim_in)
-        dim_in = self.encoder.dim_in
+        dim_in = self.encoder.dim_in # This has to be explained
 
         if cfg.gnn.layers_pre_mp > 0:
             self.pre_mp = GNNPreMP(
