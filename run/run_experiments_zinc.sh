@@ -25,7 +25,7 @@ function run_repeats {
 
     # Run each repeat as a separate job
     for SEED in {0..9}; do
-        script="sbatch -J ${cfg_suffix}-${dataset} run/wrapper.sb ${main} --repeat 1 seed ${SEED} ${common_params}"
+        script="sbatch -J ${cfg_suffix}-${dataset} run/wrapper.sb ${main} --repeat 1 seed ${SEED} wandb.use True wandb.mode "offline" ${common_params}"
         echo $script
         eval $script
     done
@@ -49,8 +49,8 @@ done
 cfg_dir="configs/GPS"
 
 DATASET="zinc"
-run_repeats ${DATASET} GraphiT+RingsC "name_tag GraphiTwRingsC.10runs"
-run_repeats ${DATASET} GraphiT+RingsNC "name_tag GraphiTwRingsNC.10runs"
+run_repeats ${DATASET} GraphiT+Rings "name_tag GraphiTwRingsEdgeValues.10runs"
+# run_repeats ${DATASET} GraphiT+RingsNC "name_tag GraphiTwRingsNC.10runs"
 # run_repeats ${DATASET} GraphiT+RingsOld "name_tag GraphiTwRingsOld.10runs"
-run_repeats ${DATASET} GraphiT+RWSE "name_tag GraphiTwRWSE.10runs"
+# run_repeats ${DATASET} GraphiT+RWSE "name_tag GraphiTwRWSE.10runs"
 

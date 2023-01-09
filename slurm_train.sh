@@ -6,7 +6,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=10
 #SBATCH --hint=nomultithread
-#SBATCH --time=20:00:00
+#SBATCH --time=13:00:00
 #SBATCH --output=/gpfswork/rech/tbr/ump88gx/logs/%j.out      # nom du fichier de sortie
 #SBATCH --error=/gpfswork/rech/tbr/ump88gx/logs/%j.out       # nom du fichier d'erreur
 
@@ -27,5 +27,5 @@ cd $WORK/GraphGPS
 args=$1
 
 echo "$args"
-config="configs/GPS/zinc-GPS+RWSE-graphiT-Rings-RWSEEdge.yaml"
+config="configs/GPS/zinc-GraphiT+Rings.yaml"
 python main.py --cfg $config  wandb.use True wandb.mode "offline"
