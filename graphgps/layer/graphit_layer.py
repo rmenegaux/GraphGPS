@@ -37,7 +37,7 @@ class MultiHeadAttentionLayer(nn.Module):
         self.Q = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
         self.K = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
         if self.use_edge_features:
-            # self.E = nn.Linear(in_dim_edges, out_dim * num_heads, bias=use_bias)
+            self.E = nn.Linear(in_dim_edges, out_dim * num_heads, bias=use_bias)
             # self.E2 = nn.Linear(in_dim_edges, 1, bias=use_bias)
             self.E2 = nn.Linear(in_dim_edges, out_dim * num_heads, bias=use_bias)
 
@@ -66,8 +66,6 @@ class MultiHeadAttentionLayer(nn.Module):
         K_h = K_h * scaling
 
         if self.use_edge_features:
-            # E = self.E(e)   # [n_batch, num_nodes, num_nodes, out_dim * num_heads]
-            # E = E.view(n_batch, num_nodes * num_nodes, self.num_heads, self.out_dim)#.transpose(1,2)
             # E = E.reshape(n_batch, self.num_heads, num_nodes, num_nodes, self.out_dim)
             # E = E.view(n_batch, num_nodes, num_nodes, self.num_heads, self.out_dim)
 
@@ -85,6 +83,7 @@ class MultiHeadAttentionLayer(nn.Module):
             scores = torch.einsum('bihk,bjhk->bijh', Q_h, K_h).unsqueeze(-1)
             # scores = Q_h.unsqueeze(1) + K_h.unsqueeze(2)
             if e is not None:
+                E = self.E(e).view(n_batch, num_nodes, num_nodes, self.num_heads, self.out_dim)
                 E2 = self.E2(e).view(n_batch, num_nodes, num_nodes, self.num_heads, self.out_dim)
                 scores = scores + E2
                 # scores *= float(2) ** -0.5 # [n_batch, num_nodes, num_nodes, num_heads, out_dim]
@@ -119,6 +118,7 @@ class MultiHeadAttentionLayer(nn.Module):
         # h = scores @ V_h # [n_batch, num_heads, num_nodes, out_dim]
         # h = torch.einsum('bhij,bhjk,bijhk->bhik', scores, V_h, E)
         h = torch.einsum('bijhk,bjhk->bihk', scores, V_h)
+        h = h + (scores * E).sum(2)
         # Normalize scores
         h = h / softmax_denom
         # Concatenate attention heads
