@@ -22,7 +22,7 @@ class GPSLayer(nn.Module):
                  local_gnn_type, global_model_type, num_heads,
                  pna_degrees=None, equivstable_pe=False, dropout=0.0,
                  attn_dropout=0.0, layer_norm=False, batch_norm=True,
-                 bigbird_cfg=None):
+                 bigbird_cfg=None, **layer_args):
         super().__init__()
 
         self.dim_h = dim_h
@@ -97,7 +97,7 @@ class GPSLayer(nn.Module):
         elif global_model_type == "GraphiT":
             self.self_attn = GraphiT_Layer(
                 dim_h, dim_h, dim_h//num_heads, num_heads,
-                attn_dropout=self.attn_dropout)
+                attn_dropout=self.attn_dropout, **layer_args)
             self.linear_attn = nn.Linear(dim_h, dim_h)
         else:
             raise ValueError(f"Unsupported global x-former model: "

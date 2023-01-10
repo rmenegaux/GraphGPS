@@ -64,8 +64,8 @@ class GraphiT_Layer(nn.Module):
         self.K = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
         if self.use_edge_features:
             assert (self.QK_op in ['multiplication', 'addition']) and (self.KE_op in ['multiplication', 'addition'])
-            edge_out_dim = 1 if (self.QK_op=='multiplication' and self.KE_op=='addition' and edge_out_dim==1) else out_dim
-            self.E = nn.Linear(in_dim_edges, edge_out_dim * num_heads, bias=use_bias)
+            self.edge_out_dim = 1 if (self.QK_op=='multiplication' and self.KE_op=='addition' and edge_out_dim==1) else out_dim
+            self.E = nn.Linear(in_dim_edges, self.edge_out_dim * num_heads, bias=use_bias)
 
         self.V = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
 
@@ -95,12 +95,14 @@ class GraphiT_Layer(nn.Module):
             E = E.view(n_batch, num_nodes, num_nodes, self.num_heads, -1) # [n_batch, num_nodes, num_nodes, num_heads, out_dim or 1]
             if self.QK_op=='multiplication':
                 if self.KE_op=='multiplication': # Attention is Q . K . E
-                    scores = torch.einsum('bihk,bjhk,bijhk->bijh', Q, K, E)
+                    scores = torch.einsum('bihk,bjhk,bijhk->bijh', Q, K, E).unsqueeze(-1)
                 else: # means addition, # Attention is Q . K + E(multi_dim or scalar)
                     scores = torch.einsum('bihk,bjhk->bijh', Q, K).unsqueeze(-1) + E # eventually it ends with dimension of 1
             
             else: # means addition, Attention is Q + K + E
                 scores = Q.unsqueeze(2) + K.unsqueeze(1) + E # (bi1hk + b1jhk + bijhk)
+
+            # scores is in bijhk, with k being eventually 1
 
         # BUG: need to check the dimensionality of `scores` as it depends on the operations we choose
         # Mask to -np.inf such that exp is 0 and you can sum over it as a softmax
@@ -117,10 +119,22 @@ class GraphiT_Layer(nn.Module):
         # Default is: We drop some connections for each node (all their heads)
         scores = scores * self.attn_dropout(attn_mask.float()) # Zeros-out elements along last dimension
 
-        # h = scores @ V # [n_batch, num_heads, num_nodes, out_dim]
-        # TODO: add Edges to V as V*E   h = torch.einsum('bhij,bhjk,bijhk->bhik', scores, V, E)
-        # or: h = scores * V * E in which case, other einsum with E after scores * V
-        h = torch.einsum('bijhk,bjhk->bihk', scores, V)
+        # Compute with Value matrix to finish attention, out size: [n_batch, num_nodes, num_heads, out_dim]
+        if self.V_with_edges:
+            # h = scores @ (V + E)
+            # We must match last dimensions
+            if self.QK_op=='multiplication' and self.KE_op=='multiplication':
+                # then scores.size[-1] is 1 while for V and E it's out_dim
+                equation = 'bijhl,bjhk,bijhk->bihk'
+            elif self.edge_out_dim==1:
+                # then scores.size[-1] is 1 as well as E, while for V it's out_dim
+                equation = 'bijhl,bjhk,bijhl->bihk'
+            else:
+                equation = 'bijhk,bjhk,bijhk->bihk'
+            h = torch.einsum(equation, scores, V, E)
+        else: # Standard and default one
+            # h = scores @ V
+            h = torch.einsum('bijhk,bjhk->bihk', scores, V)
         # Concatenate attention heads
         h = h.view(n_batch, num_nodes, -1) # [n_batch, num_nodes, out_dim * num_heads]
 
