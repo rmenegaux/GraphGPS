@@ -115,33 +115,20 @@ class GraphiT_Layer(nn.Module):
             else: # means addition, Attention is Q + K + E
                 scores = Q.unsqueeze(2) + K.unsqueeze(1) + E # (bi1hk + b1jhk + bijhk)
 
-        # Apply exponential and clamp for numerical stability
-        scores = torch.exp(scores.clamp(-5, 5)) # [n_batch, num_heads, num_nodes, num_nodes]
-        # scores = torch.exp(scores - scores.amax(dim=(-2, -1), keepdim=True))
-
-        # Make sure attention scores for padding are 0
+        # Mask to -np.inf such that exp is 0 and you can sum over it as a softmax
         attn_mask = mask.view(-1, num_nodes, 1, 1, 1) * mask.view(-1, 1, num_nodes, 1, 1) # [n_batch, num_nodes, num_nodes, 1, 1]
-        if attn_mask is not None:
-            scores = scores * attn_mask
-            # scores = scores * mask.view(-1, num_nodes, 1, 1, 1) * mask.view(-1, 1, num_nodes, 1, 1)
-
-        # TODO: change that to a full softmax
-        # softmax_denom = scores.sum(-1, keepdim=True).clamp(min=1e-6) # [n_batch, num_heads, num_nodes, 1]
-        softmax_denom = scores.sum(2).clamp(min=1e-6) # [n_batch, num_heads, num_nodes, out_dim]
-
-        # TODO: 
-        # - attn_mask.expand(n_batch, num_nodes, num_nodes, self.num_heads, 1) ??
-        # - attn_mask.expand(n_batch, num_nodes, num_nodes, self.num_heads, self.out_dim) ??
-        attn_mask = self.attn_dropout(attn_mask.float())
-        scores = scores * attn_mask
+        scores = torch.nn.functional.softmax(torch.where(attn_mask==0, -float('inf'), scores))
+        
+        # Then dropout the scores.
+        attn_mask = attn_mask.expand(n_batch, num_nodes, num_nodes, self.num_heads, 1) # expand to num_heads such that we don't drop all heads all the time
+        attn_mask = attn_mask.expand(n_batch, num_nodes, num_nodes, self.num_heads, self.out_dim) # to remove only some output connection features for some heads
+        scores = scores * self.attn_dropout(attn_mask.float())
 
         # h = scores @ V # [n_batch, num_heads, num_nodes, out_dim]
         # TODO: add Edges to V as V*E   h = torch.einsum('bhij,bhjk,bijhk->bhik', scores, V, E)
         # or: h = scores * V * E in which case, other einsum with E after scores * V
         h = torch.einsum('bijhk,bjhk->bihk', scores, V)
-        # Normalize scores
-        h = h / softmax_denom
         # Concatenate attention heads
-        h = h.view(-1, num_nodes, self.num_heads * self.out_dim) # [n_batch, num_nodes, out_dim * num_heads]
+        h = h.view(n_batch, num_nodes, -1) # [n_batch, num_nodes, out_dim * num_heads]
 
         return h
