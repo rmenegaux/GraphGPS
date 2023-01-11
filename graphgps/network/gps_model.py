@@ -19,6 +19,8 @@ class FeatureEncoder(torch.nn.Module):
     def __init__(self, dim_in):
         super(FeatureEncoder, self).__init__()
         self.dim_in = dim_in
+        if cfg.posenc_RWSE.enable and not cfg.posenc_RWSE.precompute:
+            self.rwse_compute = register.edge_encoder_dict['RWSEonthefly']()
         if cfg.dataset.node_encoder:
             # Encode integer node features via nn.Embeddings
             NodeEncoder = register.node_encoder_dict[

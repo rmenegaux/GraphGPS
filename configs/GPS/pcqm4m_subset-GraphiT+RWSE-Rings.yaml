@@ -6,7 +6,7 @@ wandb:
   project: pcqm4m
 dataset:
   format: OGB
-  name: PCQM4Mv2-full
+  name: PCQM4Mv2-subset
   task: graph
   task_type: regression
   transductive: False
@@ -16,17 +16,12 @@ dataset:
   edge_encoder: True
   edge_encoder_name: Bond+RWSE
   edge_encoder_bn: False
-<<<<<<< HEAD
   rings: True
-  rings_max_length: 18
+  rings_max_length: 6
   rings_coalesce_edges: False
 posenc_RWSE:
   enable: True
-=======
-posenc_RWSE:
-  enable: True
-  precompute: False
->>>>>>> 1ee5d74... adding option to compute rwse on the fly, pcqm4m configs
+  precompute: True
   kernel:
     times_func: range(1,17)
   model: Linear
@@ -63,12 +58,6 @@ optim:
   optimizer: adamW
   weight_decay: 0.0
   base_lr: 0.0005
-<<<<<<< HEAD
-  max_epoch: 10
-  scheduler: cosine_with_warmup
-  num_warmup_epochs: 1
-=======
   max_epoch: 100
   scheduler: cosine_with_warmup
   num_warmup_epochs: 5
->>>>>>> 1ee5d74... adding option to compute rwse on the fly, pcqm4m configs

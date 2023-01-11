@@ -1,6 +1,6 @@
 import torch
 from torch_scatter import scatter
-from torch_geometric.utils import to_dense_adj, add_self_loops
+from torch_geometric.utils import to_dense_batch, to_dense_adj, add_self_loops
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.register import (register_node_encoder,
                                                register_edge_encoder)
@@ -122,15 +122,83 @@ class TypeDictEdgeEncoder(torch.nn.Module):
         return batch
 
 
+def get_rw_landing_probs(ksteps, dense_adj,
+                         num_nodes=None, space_dim=0):
+    """Compute Random Walk landing probabilities for given list of K steps.
+
+    Args:
+        ksteps: List of k-steps for which to compute the RW landings
+        edge_index: PyG sparse representation of the graph
+        edge_weight: (optional) Edge weights
+        num_nodes: (optional) Number of nodes in the graph
+        space_dim: (optional) Estimated dimensionality of the space. Used to
+            correct the random-walk diagonal by a factor `k^(space_dim/2)`.
+            In euclidean space, this correction means that the height of
+            the gaussian distribution stays almost constant across the number of
+            steps, if `space_dim` is the dimension of the euclidean space.
+
+    Returns:
+        2D Tensor with shape (num_nodes, len(ksteps)) with RW landing probs
+    """
+    num_nodes = dense_adj.size(1)
+    deg = dense_adj.sum(2, keepdim=True) # Out degrees. (batch_size) x (Num nodes) x (1)
+    deg_inv = deg.pow(-1.)
+    deg_inv.masked_fill_(deg_inv == float('inf'), 0)
+
+    # P = D^-1 * A
+    P = deg_inv * dense_adj  # (Batch_size) x (Num nodes) x (Num nodes)
+
+    rws = []
+    rws_all = []
+    if ksteps == list(range(min(ksteps), max(ksteps) + 1)):
+        # Efficient way if ksteps are a consecutive sequence (most of the time the case)
+        Pk = P.clone().detach().matrix_power(min(ksteps))
+        for k in range(min(ksteps), max(ksteps) + 1):
+            rws.append(torch.diagonal(Pk, dim1=-2, dim2=-1) * \
+                       (k ** (space_dim / 2)))
+            rws_all.append(Pk)
+            Pk = Pk @ P
+    else:
+        # Explicitly raising P to power k for each k \in ksteps.
+        for k in ksteps:
+            rws.append(torch.diagonal(P.matrix_power(k), dim1=-2, dim2=-1) * \
+                       (k ** (space_dim / 2)))
+    rw_landing = torch.stack(rws, dim=2)  # (Batch_size) x (Num nodes) x (K steps)
+    rw_landing_all = torch.stack(rws_all, dim=3)  # (Batch_size) x (Num nodes) x (Num nodes) x (K steps)
+
+    return rw_landing, rw_landing_all
+
+@register_edge_encoder('RWSEonthefly')
+class RWSEcomputer(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        kernel_param = cfg.posenc_RWSE.kernel
+        if len(kernel_param.times) == 0:
+            raise ValueError("List of kernel times required for RWSE")
+        self.ksteps = kernel_param.times
+
+    def forward(self, batch):
+        dense_adj = to_dense_adj(batch.edge_index, batch=batch.batch)
+        # This next line is just to get the node mask (perhaps overkill)
+        _, mask = to_dense_batch(batch.edge_index.new_zeros(batch.num_nodes), batch=batch.batch)
+        rw_landing, rw_landing_all = get_rw_landing_probs(ksteps=self.ksteps,
+                                        dense_adj=dense_adj)
+        batch.pestat_RWSE = rw_landing[mask]
+        batch.edge_RWSE = rw_landing_all
+
+        return batch
+
 @register_edge_encoder('RWSEEdge')
 class RWSEEdgeEncoder(torch.nn.Module):
     def __init__(self, emb_dim, dense=False):
         super().__init__()
 
         edge_pe_in_dim = len(cfg.posenc_RWSE.kernel.times) # Size of the kernel-based PE embedding
+        self.reshape = (cfg.posenc_RWSE.precompute == True)
         self.add_dense_edge_features = dense
 
-        self.encoder = torch.nn.Linear(edge_pe_in_dim, emb_dim) 
+        self.encoder = torch.nn.Linear(edge_pe_in_dim, emb_dim) # Watch out for padding here? Use bias=False?
         # torch.nn.init.xavier_uniform_(self.encoder.weight.data)
 
     def forward(self, batch):
@@ -139,7 +207,10 @@ class RWSEEdgeEncoder(torch.nn.Module):
         forces us to flatten the dense edge feature matrices
         '''
         # First reshape the edge features into (n_batch, max_nodes, max_nodes, edge_dim)
-        batched_edge_features = reshape_flattened_adj(batch.edge_RWSE, batch.batch)
+        if self.reshape:
+            batched_edge_features = reshape_flattened_adj(batch.edge_RWSE, batch.batch)
+        else:
+            batched_edge_features = batch.edge_RWSE
         del batch.edge_RWSE # This is the largest tensor in the batch, deleting it to save space?
         batched_edge_features = self.encoder(batched_edge_features)
         # For the sparse edge_attr we keep the original edges and do not add new ones
