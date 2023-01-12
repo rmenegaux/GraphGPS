@@ -111,12 +111,8 @@ class GraphiT_Layer(nn.Module):
 
             # scores is in bijhk, with k being eventually 1
 
-        # BUG: need to check the dimensionality of `scores` as it depends on the operations we choose
         # Mask to -np.inf such that exp is 0 and you can sum over it as a softmax
         attn_mask = mask.view(-1, num_nodes, 1, 1, 1) * mask.view(-1, 1, num_nodes, 1, 1)  # [n_batch, num_nodes, num_nodes, 1, 1]
-        # import pdb; pdb.set_trace()
-        # scores = torch.nn.functional.softmax(torch.where(attn_mask == 0, -float('inf'), scores.double()), dim=2)
-        # torch.sparse.softmax(torch.where(attn_mask == 0, 0., scores.double()).to_sparse(), dim=2).to_dense()
         scores = torch.sparse.softmax((attn_mask * scores).to_sparse(), dim=2).to_dense()
         
         # Then dropout the scores.
@@ -130,9 +126,9 @@ class GraphiT_Layer(nn.Module):
         scores = scores * self.attn_dropout(attn_mask.float())  # Zeros-out elements along last dimension
 
         # Compute with Value matrix to finish attention, out size: [n_batch, num_nodes, num_heads, out_dim]
-        # V = V.double()
         if self.VE_op is not None:
-            E_value = self.E_value(edge_features)#.double()
+            E_value = self.E_value(edge_features)
+            E_value = E_value.view(n_batch, num_nodes, num_nodes, self.num_heads, -1)  # [n_batch, num_nodes, num_nodes, num_heads, out_dim or 1]
             if self.VE_op == 'addition':
                 # h = scores @ (V + E)
                 h = torch.einsum('bijhk,bjhk->bihk', scores, V)
@@ -154,6 +150,6 @@ class GraphiT_Layer(nn.Module):
             # h = scores @ V
             h = torch.einsum('bijhk,bjhk->bihk', scores, V)
         # Concatenate attention heads
-        h = h.view(n_batch, num_nodes, -1).float()  # [n_batch, num_nodes, out_dim * num_heads]
+        h = h.view(n_batch, num_nodes, -1)  # [n_batch, num_nodes, out_dim * num_heads]
 
         return h
