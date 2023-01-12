@@ -37,23 +37,25 @@ class GraphiT_Layer(nn.Module):
             h [n_batch, num_nodes, in_dim] |-> V(h) [n_batch, num_nodes, out_dim * num_heads]
             
             coef_alpha = softmax(operation(Q, K, E))
-            output = V * coef_alpha
+            output = operation(V, E) * coef_alpha
         
         attn_dropout (fct): Dropout function to be used on attention scores
         QK_op (str): which operation to use between Q and K mat.
             Either 'multiplication' or 'addition'
-        KE_op (str): which operation to use between Q and K mat.
+        KE_op (str): which operation to use between K and E mat.
+            Either 'multiplication' or 'addition'
+        VE_op (str): which operation to use between V and E mat.
             Either 'multiplication' or 'addition'
         edge_out_dim (None): Amount of edges output dimension to use.
             Any value different than 1, leads to using out_dim.
         dropout_lvl (str): Level at which to apply dropout.
             Either 'feature', 'head', 'node' or else will apply at connection level.
-        V_with_edges (bool): Whether or not to integrate edges in `scores * (V+E)`.
     """
     def __init__(self, in_dim, in_dim_edges, out_dim, num_heads,
                  use_bias=False, use_edge_features=True,
                  attn_dropout=0.0, QK_op='multiplication', KE_op='addition',
-                 edge_out_dim=None, dropout_lvl='connections', V_with_edges=False):
+                 VE_op=None, edge_out_dim=None,
+                 dropout_lvl='connections'):
         super().__init__()
         
         self.out_dim = out_dim
@@ -61,8 +63,8 @@ class GraphiT_Layer(nn.Module):
         self.use_edge_features = use_edge_features
         self.QK_op = QK_op
         self.KE_op = KE_op
+        self.VE_op = VE_op
         self.dropout_lvl = dropout_lvl
-        self.V_with_edges = V_with_edges
         
         self.Q = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
         self.K = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
@@ -70,6 +72,7 @@ class GraphiT_Layer(nn.Module):
             assert (self.QK_op in ['multiplication', 'addition']) and (self.KE_op in ['multiplication', 'addition'])
             self.edge_out_dim = 1 if (self.QK_op=='multiplication' and self.KE_op=='addition' and edge_out_dim==1) else out_dim
             self.E = nn.Linear(in_dim_edges, self.edge_out_dim * num_heads, bias=use_bias)
+            self.E_value = nn.Linear(in_dim_edges, self.edge_out_dim * num_heads, bias=use_bias)
 
         self.V = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
 
@@ -111,7 +114,10 @@ class GraphiT_Layer(nn.Module):
         # BUG: need to check the dimensionality of `scores` as it depends on the operations we choose
         # Mask to -np.inf such that exp is 0 and you can sum over it as a softmax
         attn_mask = mask.view(-1, num_nodes, 1, 1, 1) * mask.view(-1, 1, num_nodes, 1, 1)  # [n_batch, num_nodes, num_nodes, 1, 1]
-        scores = torch.nn.functional.softmax(torch.where(attn_mask == 0, -float('inf'), scores))
+        # import pdb; pdb.set_trace()
+        # scores = torch.nn.functional.softmax(torch.where(attn_mask == 0, -float('inf'), scores.double()), dim=2)
+        # torch.sparse.softmax(torch.where(attn_mask == 0, 0., scores.double()).to_sparse(), dim=2).to_dense()
+        scores = torch.sparse.softmax((attn_mask * scores).to_sparse(), dim=2).to_dense()
         
         # Then dropout the scores.
         if self.dropout_lvl == 'feature':  # We drop some features for each head
@@ -124,22 +130,30 @@ class GraphiT_Layer(nn.Module):
         scores = scores * self.attn_dropout(attn_mask.float())  # Zeros-out elements along last dimension
 
         # Compute with Value matrix to finish attention, out size: [n_batch, num_nodes, num_heads, out_dim]
-        if self.V_with_edges:
-            # h = scores @ (V + E)
-            # We must match last dimensions
-            if self.QK_op == 'multiplication' and self.KE_op == 'multiplication':
-                # then scores.size[-1] is 1 while for V and E it's out_dim
-                equation = 'bijhl,bjhk,bijhk->bihk'
-            elif self.edge_out_dim == 1:
-                # then scores.size[-1] is 1 as well as E, while for V it's out_dim
-                equation = 'bijhl,bjhk,bijhl->bihk'
-            else:
-                equation = 'bijhk,bjhk,bijhk->bihk'
-            h = torch.einsum(equation, scores, V, E)
+        # V = V.double()
+        if self.VE_op is not None:
+            E_value = self.E_value(edge_features)#.double()
+            if self.VE_op == 'addition':
+                # h = scores @ (V + E)
+                h = torch.einsum('bijhk,bjhk->bihk', scores, V)
+                h += torch.einsum('bijhk,bijhk->bihk', scores, E_value)
+
+            elif self.VE_op == 'multiplication':
+                # h = scores * V * E
+                # We must match last dimensions
+                if self.QK_op == 'multiplication' and self.KE_op == 'multiplication':
+                    # then scores.size[-1] is 1 while for V and E it's out_dim
+                    equation = 'bijhl,bjhk,bijhk->bihk'
+                elif self.edge_out_dim == 1:
+                    # then scores.size[-1] is 1 as well as E, while for V it's out_dim
+                    equation = 'bijhl,bjhk,bijhl->bihk'
+                else:
+                    equation = 'bijhk,bjhk,bijhk->bihk'
+                h = torch.einsum(equation, scores, V, E_value)
         else:  # Standard and default one
             # h = scores @ V
             h = torch.einsum('bijhk,bjhk->bihk', scores, V)
         # Concatenate attention heads
-        h = h.view(n_batch, num_nodes, -1)  # [n_batch, num_nodes, out_dim * num_heads]
+        h = h.view(n_batch, num_nodes, -1).float()  # [n_batch, num_nodes, out_dim * num_heads]
 
         return h
