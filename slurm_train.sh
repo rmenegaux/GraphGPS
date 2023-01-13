@@ -27,5 +27,5 @@ cd $WORK/GraphGPS
 args=$1
 
 echo "$args"
-config="configs/GPS/zinc-GPS+RWSE-graphiT-Rings-RWSEEdge.yaml"
+config="configs/GPS/ogbg-molpcba-GraphiT+RWSE.yaml"
 python main.py --cfg $config  wandb.use True wandb.mode "offline"
