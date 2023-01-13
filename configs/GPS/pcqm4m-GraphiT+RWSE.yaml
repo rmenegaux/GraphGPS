@@ -16,17 +16,12 @@ dataset:
   edge_encoder: True
   edge_encoder_name: Bond+RWSE
   edge_encoder_bn: False
-<<<<<<< HEAD
-  rings: True
+  rings: False
   rings_max_length: 18
   rings_coalesce_edges: False
 posenc_RWSE:
   enable: True
-=======
-posenc_RWSE:
-  enable: True
-  precompute: False
->>>>>>> 1ee5d74... adding option to compute rwse on the fly, pcqm4m configs
+  precompute: True
   kernel:
     times_func: range(1,17)
   model: Linear
@@ -44,7 +39,7 @@ model:
 gt:
   layer_type: None+GraphiT
   layers: 5
-  n_heads: 4
+  n_heads: 8
   dim_hidden: 304  # `gt.dim_hidden` must match `gnn.dim_inner`
   dropout: 0.0
   attn_dropout: 0.5
@@ -62,13 +57,6 @@ optim:
   clip_grad_norm: True
   optimizer: adamW
   weight_decay: 0.0
-  base_lr: 0.0005
-<<<<<<< HEAD
-  max_epoch: 10
-  scheduler: cosine_with_warmup
-  num_warmup_epochs: 1
-=======
-  max_epoch: 100
+  max_epoch: 150
   scheduler: cosine_with_warmup
   num_warmup_epochs: 5
->>>>>>> 1ee5d74... adding option to compute rwse on the fly, pcqm4m configs
