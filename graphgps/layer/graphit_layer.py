@@ -1,3 +1,4 @@
+import time
 import torch
 import torch.nn as nn
 
@@ -78,7 +79,6 @@ class GraphiT_Layer(nn.Module):
 
         self.attn_dropout = nn.Dropout(p=attn_dropout)
 
-        
     def forward(self, h, edge_features=None, mask=None):
         
         Q = self.Q(h)  # [n_batch, num_nodes, out_dim * num_heads]
@@ -113,7 +113,9 @@ class GraphiT_Layer(nn.Module):
 
         # Mask to -np.inf such that exp is 0 and you can sum over it as a softmax
         attn_mask = mask.view(-1, num_nodes, 1, 1, 1) * mask.view(-1, 1, num_nodes, 1, 1)  # [n_batch, num_nodes, num_nodes, 1, 1]
-        scores = torch.sparse.softmax((attn_mask * scores).to_sparse(), dim=2).to_dense()
+        #scores = torch.sparse.softmax((attn_mask * scores).to_sparse(), dim=2).to_dense()
+        scores = torch.nn.functional.softmax(torch.where(attn_mask == 0, -float('inf'), scores.double()))
+        scores = torch.where(scores.isnan(), 0., scores)
         
         # Then dropout the scores.
         if self.dropout_lvl == 'feature':  # We drop some features for each head
@@ -126,8 +128,9 @@ class GraphiT_Layer(nn.Module):
         scores = scores * self.attn_dropout(attn_mask.float())  # Zeros-out elements along last dimension
 
         # Compute with Value matrix to finish attention, out size: [n_batch, num_nodes, num_heads, out_dim]
+        V = V.double()
         if self.VE_op is not None:
-            E_value = self.E_value(edge_features)
+            E_value = self.E_value(edge_features).double()
             E_value = E_value.view(n_batch, num_nodes, num_nodes, self.num_heads, -1)  # [n_batch, num_nodes, num_nodes, num_heads, out_dim or 1]
             if self.VE_op == 'addition':
                 # h = scores @ (V + E)
@@ -150,6 +153,6 @@ class GraphiT_Layer(nn.Module):
             # h = scores @ V
             h = torch.einsum('bijhk,bjhk->bihk', scores, V)
         # Concatenate attention heads
-        h = h.view(n_batch, num_nodes, -1)  # [n_batch, num_nodes, out_dim * num_heads]
+        h = h.view(n_batch, num_nodes, -1).float()  # [n_batch, num_nodes, out_dim * num_heads]
 
         return h
