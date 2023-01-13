@@ -17,7 +17,7 @@ dataset:
   edge_encoder_name: Bond+RWSE
   edge_encoder_bn: False
   rings: True
-  rings_max_length: 6
+  rings_max_length: 18
   rings_coalesce_edges: False
 posenc_RWSE:
   enable: True
@@ -58,6 +58,6 @@ optim:
   optimizer: adamW
   weight_decay: 0.0
   base_lr: 0.0005
-  max_epoch: 100
+  max_epoch: 150
   scheduler: cosine_with_warmup
   num_warmup_epochs: 5
