@@ -10,10 +10,10 @@ dataset:
   task_type: classification
   transductive: False
   node_encoder: True
-  node_encoder_name: Atom+RWSE
+  node_encoder_name: Atom1+RWSE
   node_encoder_bn: False
   edge_encoder: True
-  edge_encoder_name: Bond+RWSE
+  edge_encoder_name: Bond1+RWSE
   edge_encoder_bn: False
   rings: False
   rings_max_length: 6

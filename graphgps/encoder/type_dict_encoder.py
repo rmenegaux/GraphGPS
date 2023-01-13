@@ -211,6 +211,34 @@ class RingEdgeEncoder(torch.nn.Module):
 
         return batch
 
+@register_edge_encoder('Bond1')
+class Bond1Encoder(torch.nn.Module):
+    '''
+    Embed only the first feature in the OGB bond features
+    '''
+    def __init__(self, emb_dim):
+        super().__init__()
+
+        self.encoder = torch.nn.Embedding(num_embeddings=2, embedding_dim=emb_dim, padding_idx=0) 
+        # torch.nn.init.xavier_uniform_(self.encoder.weight.data)
+
+    def forward(self, batch):
+        '''
+        '''
+        # ring_attr = torch.ones_like(batch.ring_index[0])
+        ring_dense = to_dense_adj(batch.ring_index, batch=batch.batch).long()
+        # FIXME: For sparse version:
+        # Should check that ring_index is indexed in the same manner as edge_index after batching
+        # Miraculously seems to be the case.
+        # ring_index = set(batch.ring_index)
+        # edge_mask = torch.Tensor([edge in ring_index for edge in batch.edge_index],
+        #                          dtype=batch.edge_index.dtype, device=batch.edge_index.device)
+        # batch.edge_attr += self.encoder(edge_mask)
+
+        batch.edge_dense += self.encoder(ring_dense)
+
+        return batch
+
 # OGB ring and OGB Ring RWSE
 @register_edge_encoder('TypeDictEdge+RWSEEdge')
 class TypeRWSEEdgeEncoder(torch.nn.Module):
@@ -300,10 +328,10 @@ def unbatch(src: Tensor, batch: Tensor, dim: int = 0) -> List[Tensor]:
             tensor. (default: :obj:`0`)
     :rtype: :class:`List[Tensor]`
     Example:
-        >>> src = torch.arange(7)
-        >>> batch = torch.tensor([0, 0, 0, 1, 1, 2, 2])
+        >>> src = torch.arange(14)
+        >>> batch = torch.tensor([0, 0, 0, 1, 2, 2])
         >>> unbatch(src, batch)
-        (tensor([0, 1, 2]), tensor([3, 4]), tensor([5, 6]))
+        (tensor([0, 1, 2, 3, 4, 5, 6, 7, 8]), tensor([9]), tensor([10, 11, 12, 13]))
     """
     sizes = (degree(batch, dtype=torch.long)**2).tolist()
     return src.split(sizes, dim)
