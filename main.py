@@ -32,6 +32,8 @@ def new_optimizer_config(cfg):
                            base_lr=cfg.optim.base_lr,
                            weight_decay=cfg.optim.weight_decay,
                            momentum=cfg.optim.momentum)
+    # TODO: Find a way to do something like that ? Restricting chosen arguments
+    return ExtendedSchedulerConfig(**cfg.optim.__dict__)
 
 
 def new_scheduler_config(cfg):
@@ -42,6 +44,9 @@ def new_scheduler_config(cfg):
         schedule_patience=cfg.optim.schedule_patience, min_lr=cfg.optim.min_lr,
         num_warmup_epochs=cfg.optim.num_warmup_epochs,
         train_mode=cfg.train.mode, eval_period=cfg.train.eval_period)
+    # TODO: Find a way to do something like that ? Restricting chosen arguments
+    setattr(cfg.optim, 'train_mode', cfg.train.mode)
+    return ExtendedSchedulerConfig(**cfg.optim.__dict__)
 
 
 def custom_set_out_dir(cfg, cfg_fname, name_tag):
@@ -56,7 +61,9 @@ def custom_set_out_dir(cfg, cfg_fname, name_tag):
     """
     run_name = os.path.splitext(os.path.basename(cfg_fname))[0]
     run_name += f"-{name_tag}" if name_tag else ""
-    cfg.out_dir = os.path.join(cfg.out_dir, run_name)
+    cfg.out_dir = os.path.join(os.path.join(cfg.out_dir, run_name), cfg.wandb.name)
+    if not os.path.exists(cfg.out_dir):
+        os.makedirs(cfg.out_dir)
 
 
 def custom_set_run_dir(cfg, run_id):

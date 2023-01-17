@@ -5,6 +5,7 @@ wandb:
   use: True
   project: ZINC_LayerFinal
   entity: emmanuel-jehanno
+  name: (QK+E)*(V+E)_GINE_DptConn
 dataset:
   dir: /home/ejehanno/repos/
   format: PyG-ZINC
@@ -41,7 +42,7 @@ model:
   edge_decoding: dot
   graph_pooling: add
 gt:
-  layer_type: None+GraphiT  # CustomGatedGCN+Performer
+  layer_type: GINE+GraphiT  # CustomGatedGCN+Performer
   layers: 10
   n_heads: 4
   dim_hidden: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
@@ -54,7 +55,7 @@ gt:
     - KE_op: addition
     - edge_out_dim: null
     - dropout_lvl: connections
-    - VE_op: null
+    - VE_op: addition
 gnn:
   head: san_graph
   layers_pre_mp: 0

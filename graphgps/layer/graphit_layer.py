@@ -73,7 +73,8 @@ class GraphiT_Layer(nn.Module):
             assert (self.QK_op in ['multiplication', 'addition']) and (self.KE_op in ['multiplication', 'addition'])
             self.edge_out_dim = 1 if (self.QK_op=='multiplication' and self.KE_op=='addition' and edge_out_dim==1) else out_dim
             self.E = nn.Linear(in_dim_edges, self.edge_out_dim * num_heads, bias=use_bias)
-            self.E_value = nn.Linear(in_dim_edges, self.edge_out_dim * num_heads, bias=use_bias)
+            # E_value will always be multi
+            self.E_value = nn.Linear(in_dim_edges, out_dim * num_heads, bias=use_bias)
 
         self.V = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
 
@@ -114,7 +115,7 @@ class GraphiT_Layer(nn.Module):
         # Mask to -np.inf such that exp is 0 and you can sum over it as a softmax
         attn_mask = mask.view(-1, num_nodes, 1, 1, 1) * mask.view(-1, 1, num_nodes, 1, 1)  # [n_batch, num_nodes, num_nodes, 1, 1]
         #scores = torch.sparse.softmax((attn_mask * scores).to_sparse(), dim=2).to_dense()
-        scores = torch.nn.functional.softmax(torch.where(attn_mask == 0, -float('inf'), scores.double()))
+        scores = torch.nn.functional.softmax(torch.where(attn_mask == 0, -float('inf'), scores.double()), dim=2)
         scores = torch.where(scores.isnan(), 0., scores)
         
         # Then dropout the scores.
@@ -135,7 +136,10 @@ class GraphiT_Layer(nn.Module):
             if self.VE_op == 'addition':
                 # h = scores @ (V + E)
                 h = torch.einsum('bijhk,bjhk->bihk', scores, V)
-                h += torch.einsum('bijhk,bijhk->bihk', scores, E_value)
+                if self.edge_out_dim==1:
+                    h += torch.einsum('bijhl,bijhk->bihk', scores, E_value)
+                else:
+                    h += torch.einsum('bijhk,bijhk->bihk', scores, E_value)
 
             elif self.VE_op == 'multiplication':
                 # h = scores * V * E
@@ -151,8 +155,14 @@ class GraphiT_Layer(nn.Module):
                 h = torch.einsum(equation, scores, V, E_value)
         else:  # Standard and default one
             # h = scores @ V
-            h = torch.einsum('bijhk,bjhk->bihk', scores, V)
+            if self.QK_op == 'multiplication' and self.KE_op == 'multiplication':
+                h = torch.einsum('bijhl,bjhk->bihk', scores, V)
+            else:
+                h = torch.einsum('bijhk,bjhk->bihk', scores, V)
         # Concatenate attention heads
-        h = h.view(n_batch, num_nodes, -1).float()  # [n_batch, num_nodes, out_dim * num_heads]
+        try: # FIXME
+            h = h.view(n_batch, num_nodes, -1).float()  # [n_batch, num_nodes, out_dim * num_heads]
+        except:
+            h = h.reshape(n_batch, num_nodes, -1).float()
 
         return h
