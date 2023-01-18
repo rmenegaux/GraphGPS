@@ -28,4 +28,8 @@ args=$1
 
 echo "$args"
 config="configs/GPS/zinc-GraphiT+Rings.yaml"
-python main.py --cfg $config  wandb.use True wandb.mode "offline"
+# config="configs/GPS/ogbg-molpcba-GPS+RWSE.yaml"
+# config="configs/GPS/mnist-GraphiT.yaml"
+config="configs/GPS/pcqm4m_subset-GraphiT+RWSE-Atom1fly.yaml"
+# config="configs/GPS/pcqm4m_subset-GraphiT+RWSEonthefly.yaml"
+python main.py --cfg $config  wandb.use True wandb.mode "offline" wandb.name "PCQM4Mv2-subset.GraphiT-RWSEonthefly-noRings-Bond1.r0"

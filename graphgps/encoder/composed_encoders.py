@@ -150,6 +150,7 @@ from torch_geometric.graphgym.register import register_edge_encoder
 from graphgps.encoder.type_dict_encoder import (TypeDictEdgeEncoder, 
     RWSEEdgeEncoder, RingEdgeEncoder, DenseEdgeEncoder)
 from graphgps.encoder.linear_edge_encoder import LinearEdgeEncoder
+from graphgps.encoder.dummy_edge_encoder import DummyEdgeEncoder
 from graphgps.encoder.ogb_encoder import Bond1Encoder
 
 
@@ -227,7 +228,8 @@ def concat_edge_encoders(encoder_classes, pe_enc_names):
 edge_ds_encs = {'Bond': BondEncoder,
                 'Bond1': Bond1Encoder,
                 'TypeDictEdge': TypeDictEdgeEncoder,
-                'LinearEdge': LinearEdgeEncoder}
+                'LinearEdge': LinearEdgeEncoder,
+                'Dummy': DummyEdgeEncoder}
 
 # Positional Encoding node encoders.
 edge_pe_encs = {'RWSE': RWSEEdgeEncoder,
