@@ -112,6 +112,7 @@ class MultiHeadAttentionLayer(nn.Module):
         # softmax_denom = scores.sum(-1, keepdim=True).clamp(min=1e-6) # [n_batch, num_heads, num_nodes, 1]
         softmax_denom = scores.sum(2).clamp(min=1e-6) # [n_batch, num_heads, num_nodes, out_dim]
 
+        # attn_mask = attn_mask.expand(n_batch, num_nodes, num_nodes, self.num_heads, 1)
         attn_mask = self.attn_dropout(attn_mask.float())
         scores = scores * attn_mask
 

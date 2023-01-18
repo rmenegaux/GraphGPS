@@ -24,8 +24,8 @@ function run_repeats {
     echo "  output dir: ${out_dir}"
 
     # Run each repeat as a separate job
-    for SEED in {0..9}; do
-        script="sbatch -J ${cfg_suffix}-${dataset} run/wrapper.sb ${main} --repeat 1 seed ${SEED} ${common_params}"
+    for SEED in 2 4; do
+        script="sbatch -J ${cfg_suffix}-${dataset} run/wrapper.sb ${main} --repeat 1 seed ${SEED} wandb.use True wandb.mode "offline" ${common_params}"
         echo $script
         eval $script
     done
@@ -49,7 +49,7 @@ done
 cfg_dir="configs/GPS"
 
 DATASET="zinc"
-run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.10runs"
+# run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.10runs"
 
 
 # DATASET="mnist"
@@ -60,12 +60,12 @@ run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.10runs"
 # run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.10run"
 
 
-# DATASET="pattern"
-# run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.eigv16.lr0005"
+#DATASET="pattern"
+#run_repeats ${DATASET} GraphiT "name_tag GraphiTwLapPE.eigv16.lr0005.10run"
 
 
-# DATASET="cluster"
-# run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.lr0005.10run"
+DATASET="cluster"
+run_repeats ${DATASET} GraphiT "name_tag GraphiTwLapPE.lr0005.runrecalcitrants"
 
 
 # DATASET="ogbg-molhiv"
