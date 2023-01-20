@@ -11,7 +11,7 @@ dataset:
   transductive: False
   split_mode: standard
   node_encoder: True
-  node_encoder_name: LapPE
+  node_encoder_name: RWSE
   node_encoder_bn: False
   edge_encoder: True
   edge_encoder_name: Dummy+RWSE
@@ -70,4 +70,4 @@ optim:
   base_lr: 0.0005
   max_epoch: 100
   scheduler: cosine_with_warmup
-  num_warmup_epochs: 10
+  num_warmup_epochs: 5

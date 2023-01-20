@@ -10,13 +10,14 @@ dataset:
   task_type: classification_multilabel
   transductive: False
   node_encoder: True
-  node_encoder_name: Atom
+  node_encoder_name: Atom+RWSE
   node_encoder_bn: False
   edge_encoder: True
-  edge_encoder_name: Bond
+  edge_encoder_name: Bond+RWSE
   edge_encoder_bn: False
 posenc_RWSE:
-  enable: False
+  enable: True
+  precompute: False
   kernel:
     times_func: range(1,17)
   model: Linear
@@ -34,8 +35,8 @@ model:
   graph_pooling: mean
 gt:
   layer_type: None+GraphiT
-  layers: 5
-  n_heads: 4
+  layers: 10
+  n_heads: 8
   dim_hidden: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
   dropout: 0.2
   attn_dropout: 0.5
