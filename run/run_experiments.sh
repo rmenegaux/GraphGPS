@@ -24,7 +24,7 @@ function run_repeats {
     echo "  output dir: ${out_dir}"
 
     # Run each repeat as a separate job
-    for SEED in 2 4; do
+    for SEED in {0..9}; do
         script="sbatch -J ${cfg_suffix}-${dataset} run/wrapper.sb ${main} --repeat 1 seed ${SEED} wandb.use True wandb.mode "offline" ${common_params}"
         echo $script
         eval $script
@@ -65,7 +65,7 @@ DATASET="zinc"
 
 
 DATASET="cluster"
-run_repeats ${DATASET} GraphiT "name_tag GraphiTwLapPE.lr0005.runrecalcitrants"
+run_repeats ${DATASET} GraphiT "name_tag GraphiTwRWSE.lr0005.10runs"
 
 
 # DATASET="ogbg-molhiv"
