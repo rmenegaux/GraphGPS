@@ -189,6 +189,37 @@ class RWSEcomputer(torch.nn.Module):
 
         return batch
 
+@register_edge_encoder('SPDEdge')
+class SPDEdgeEncoder(torch.nn.Module):
+    def __init__(self, emb_dim, dense=False):
+        super().__init__()
+
+        self.add_dense_edge_features = dense
+
+        num_types = cfg.dataset.spd_max_length + 1
+        if num_types < 1:
+            raise ValueError(f"Invalid 'spd_max_length': {num_types}")
+
+        self.encoder = torch.nn.Embedding(num_embeddings=num_types,
+                                          embedding_dim=emb_dim)
+        # torch.nn.init.xavier_uniform_(self.encoder.weight.data)
+
+    def forward(self, batch):
+        # Doing things in this order (first embedding, then transforming to dense,
+        # ensures that padding remains 0)
+        spd_embedding = self.encoder(batch.spd_lengths)
+        spd_dense = to_dense_adj(batch.spd_index, batch=batch.batch, edge_attr=spd_embedding)
+
+        batch_idx, row, col = get_dense_indices_from_sparse(batch.edge_index, batch.batch)
+        batch.edge_attr = spd_dense[batch_idx, row, col]
+
+        if self.add_dense_edge_features:
+            # Maybe directly concatenate this instead, as for NodePE?
+            batch.edge_dense = spd_dense
+
+        return batch
+
+
 @register_edge_encoder('RWSEEdge')
 class RWSEEdgeEncoder(torch.nn.Module):
     def __init__(self, emb_dim, dense=False):

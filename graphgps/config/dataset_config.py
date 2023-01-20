@@ -19,3 +19,7 @@ def dataset_cfg(cfg):
     cfg.dataset.rings = False
     cfg.dataset.rings_max_length = 6
     cfg.dataset.rings_coalesce_edges = False
+
+    # Whether to add shortest path information per graph
+    cfg.dataset.spd = False
+    cfg.dataset.spd_max_length = 6

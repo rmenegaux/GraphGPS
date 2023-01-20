@@ -24,7 +24,8 @@ from graphgps.transform.posenc_stats import compute_posenc_stats
 from graphgps.transform.transforms import (pre_transform_in_memory,
                                            typecast_x, concat_x_and_pos,
                                            clip_graphs_to_size,
-                                           add_rings)
+                                           add_rings,
+                                           compute_shortest_paths)
 
 
 def log_loaded_dataset(dataset, format, name):
@@ -214,6 +215,22 @@ def load_dataset_master(format, name, dataset_dir):
                      f"{cfg.dataset.rings_max_length} for all graphs...")
         pre_transform_in_memory(dataset,
                                 partial(add_rings, config=cfg.dataset),
+                                show_progress=True
+                                )
+        elapsed = time.perf_counter() - start
+        timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
+                  + f'{elapsed:.2f}'[-3:]
+        logging.info(f"Done! Took {timestr}")
+
+    # Add shortest path length information
+    if not hasattr(cfg.dataset, 'spd'):
+        cfg.dataset.spd = False
+    if cfg.dataset.spd == True:
+        start = time.perf_counter()
+        logging.info(f"Adding shortest path distance up to length: "
+                     f"{cfg.dataset.spd_max_length} for all graphs...")
+        pre_transform_in_memory(dataset,
+                                partial(compute_shortest_paths, config=cfg.dataset),
                                 show_progress=True
                                 )
         elapsed = time.perf_counter() - start
