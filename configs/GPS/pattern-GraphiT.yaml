@@ -11,13 +11,13 @@ dataset:
   transductive: False
   split_mode: standard
   node_encoder: True
-  node_encoder_name: LapPE
+  node_encoder_name: RWSE
   node_encoder_bn: False
   edge_encoder: True
   edge_encoder_name: Dummy+RWSE
   edge_encoder_bn: False
 posenc_LapPE:
-  enable: True
+  enable: False
   eigen:
     laplacian_norm: none
     eigvec_norm: L2

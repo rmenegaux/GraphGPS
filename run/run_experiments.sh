@@ -60,12 +60,12 @@ DATASET="zinc"
 # run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.10run"
 
 
-#DATASET="pattern"
-#run_repeats ${DATASET} GraphiT "name_tag GraphiTwLapPE.eigv16.lr0005.10run"
+DATASET="pattern"
+run_repeats ${DATASET} GraphiT "name_tag GraphiTwRWSE.lr0005.10run"
 
 
-DATASET="cluster"
-run_repeats ${DATASET} GraphiT "name_tag GraphiTwRWSE.lr0005.10runs"
+#DATASET="cluster"
+#run_repeats ${DATASET} GraphiT "name_tag GraphiTwRWSE.lr0005.10runs"
 
 
 # DATASET="ogbg-molhiv"
