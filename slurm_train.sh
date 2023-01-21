@@ -27,11 +27,9 @@ cd $WORK/GraphGPS
 args=$1
 
 echo "$args"
-config="configs/GPS/zinc-GraphiT+Rings-RWSEfly.yaml"
-# config="configs/GPS/ogbg-molpcba-GPS+RWSE.yaml"
-# config="configs/GPS/mnist-GraphiT.yaml"
-#config="configs/GPS/pcqm4m_subset-GraphiT+RWSE-Atom1fly.yaml"
-# config="configs/GPS/pcqm4m_subset-GraphiT+RWSEonthefly.yaml"
-#config="configs/GPS/ogbg-molpcba-GraphiT+RWSE.yaml"
-# python main.py --cfg $config  wandb.use True wandb.mode "offline" wandb.name "pcba.GraphiT-RWSEonthefly.r0"
-python main.py --cfg $config  wandb.use True wandb.mode "offline" wandb.name "zinc.GraphiT-RWSEonthefly-Rings.r0"
+# config="configs/GPS/zinc-GraphiT+Rings-RWSEfly.yaml"
+config_name="ogbg-molpcba-GraphiT+RWSE"
+config_name="pcqm4m_subset-GraphiT+RWSEonthefly-Rings"
+# config_name="pcqm4m-GraphiT+RWSE"
+config="configs/GPS/${config_name}.yaml"
+python main.py --cfg $config  wandb.use True wandb.mode "offline" wandb.name "${config_name}.trim64.r0"

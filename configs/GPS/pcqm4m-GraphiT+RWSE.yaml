@@ -21,7 +21,7 @@ dataset:
   rings_coalesce_edges: False
 posenc_RWSE:
   enable: True
-  precompute: True
+  precompute: False
   kernel:
     times_func: range(1,17)
   model: Linear
