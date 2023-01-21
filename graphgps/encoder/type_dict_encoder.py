@@ -196,7 +196,7 @@ class SPDEdgeEncoder(torch.nn.Module):
 
         self.add_dense_edge_features = dense
 
-        num_types = cfg.dataset.spd_max_length + 1
+        num_types = cfg.dataset.spd_max_length + 2
         if num_types < 1:
             raise ValueError(f"Invalid 'spd_max_length': {num_types}")
 
@@ -205,6 +205,10 @@ class SPDEdgeEncoder(torch.nn.Module):
         # torch.nn.init.xavier_uniform_(self.encoder.weight.data)
 
     def forward(self, batch):
+        # Shifting lengths by 1 and adding 0s on the diagonal to distinguish
+        # non-connected nodes from self-connections
+        batch.spd_index, batch.spd_lengths = add_self_loops(
+            batch.spd_index, batch.spd_lengths + 1, fill_value=0)
         # Doing things in this order (first embedding, then transforming to dense,
         # ensures that padding remains 0)
         spd_embedding = self.encoder(batch.spd_lengths)
