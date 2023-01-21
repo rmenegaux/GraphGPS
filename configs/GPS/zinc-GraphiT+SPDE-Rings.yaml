@@ -20,6 +20,9 @@ dataset:
   edge_encoder_bn: False
   spd: True
   spd_max_length: 10
+  rings: True
+  rings_max_length: 18
+  rings_coalesce_edges: False
 posenc_RWSE:
   enable: True
   kernel:
