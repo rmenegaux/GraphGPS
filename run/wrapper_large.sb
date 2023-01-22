@@ -11,10 +11,11 @@
 #SBATCH --output=/gpfswork/rech/tbr/ump88gx/logs/%j.out      # nom du fichier de sortie
 #SBATCH --error=/gpfswork/rech/tbr/ump88gx/logs/%j.out       # nom du fichier d'erreur
 
-
-
+# Example wrapper, adjust to your system.
 
 module purge
+date
+hostname
 
 source $HOME/.bashrc
 # module load cuda/10.1.2
@@ -24,13 +25,8 @@ conda activate $WORK/miniconda3/envs/graphgps
 
 cd $WORK/GraphGPS
 
+echo $@
+eval $@
 
-args=$1
-
-echo "$args"
-# config="configs/GPS/zinc-GraphiT+Rings-RWSEfly.yaml"
-config_name="ogbg-molpcba-GraphiT+RWSE"
-config_name="pcqm4m_subset-GraphiTmedium+RWSE"
-# config_name="pcqm4m-GraphiT+RWSE"
-config="configs/GPS/${config_name}.yaml"
-python main.py --cfg $config  wandb.use True wandb.mode "offline" wandb.name "${config_name}.trim64.r0"
+echo "All done in sbatch."
+date
