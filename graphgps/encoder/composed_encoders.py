@@ -13,6 +13,7 @@ from graphgps.encoder.voc_superpixels_encoder import VOCNodeEncoder
 from graphgps.encoder.type_dict_encoder import TypeDictNodeEncoder
 from graphgps.encoder.linear_node_encoder import LinearNodeEncoder
 from graphgps.encoder.equivstable_laplace_pos_encoder import EquivStableLapPENodeEncoder
+from graphgps.encoder.ogb_encoder import Atom1Encoder
 
 
 def concat_node_encoders(encoder_classes, pe_enc_names):
@@ -99,6 +100,7 @@ def concat_node_encoders(encoder_classes, pe_enc_names):
 
 # Dataset-specific node encoders.
 ds_encs = {'Atom': AtomEncoder,
+           'Atom1': Atom1Encoder,
            'ASTNode': ASTNodeEncoder,
            'PPANode': PPANodeEncoder,
            'TypeDictNode': TypeDictNodeEncoder,

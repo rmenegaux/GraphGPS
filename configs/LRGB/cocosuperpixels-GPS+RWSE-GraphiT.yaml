@@ -1,27 +1,25 @@
 out_dir: results
-metric_best: auc
+metric_best: f1
 wandb:
   use: True
-  project: molhiv
+  project: COCO
   entity: emmanuel-jehanno
   name: (QK+E)*(V+E)_multi_DptConn
-  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/molhiv
+  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/COCOSuperpixels
 dataset:
   dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets
-  format: OGB
-  name: ogbg-molhiv
-  task: graph
+  format: PyG-COCOSuperpixels
+  name: edge_wt_region_boundary
+  slic_compactness: 10
+  task: graph  # Even if VOC is node-level task, this needs to be set as 'graph'
   task_type: classification
   transductive: False
   node_encoder: True
-  node_encoder_name: Atom+RWSE
+  node_encoder_name: VOCNode+RWSE
   node_encoder_bn: False
   edge_encoder: True
-  edge_encoder_name: Bond+RWSE
+  edge_encoder_name: VOCEdge+RWSE
   edge_encoder_bn: False
-  rings: True
-  rings_max_length: 6
-  rings_coalesce_edges: False
 posenc_RWSE:
   enable: True
   kernel:
@@ -36,15 +34,13 @@ train:
   ckpt_period: 100
 model:
   type: GPSModel
-  loss_fun: cross_entropy
-  edge_decoding: dot
-  graph_pooling: mean
+  loss_fun: weighted_cross_entropy
 gt:
-  layer_type: None+GraphiT
-  layers: 4 # TODO: same for zinc so need to adapt? It's kept the same in GPS
-  n_heads: 4
-  dim_hidden: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
-  dropout: 0.05
+  layer_type: None+GraphiT  #Performer
+  layers: 4
+  n_heads: 8
+  dim_hidden: 120  # `gt.dim_hidden` must match `gnn.dim_inner`
+  dropout: 0.0
   attn_dropout: 0.5
   layer_norm: False
   batch_norm: True
@@ -55,30 +51,27 @@ gt:
     - dropout_lvl: connections
     - VE_op: addition
 gnn:
-  head: san_graph
+  head: inductive_node
   layers_pre_mp: 0
-  layers_post_mp: 3  # Not used when `gnn.head: san_graph`
-  dim_inner: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
+  layers_post_mp: 3
+  dim_inner: 120  # `gt.dim_hidden` must match `gnn.dim_inner`
   batchnorm: True
   act: relu
   dropout: 0.0
-  agg: mean
-  normalize_adj: False
 optim:
   clip_grad_norm: True
   optimizer: adamW
-  weight_decay: 1e-5
-  base_lr: 0.0001
-  max_epoch: 100
+  weight_decay: 0.0
+  base_lr: 0.0005
+  max_epoch: 200
   scheduler: cosine_with_warmup
-  num_warmup_epochs: 5
+  num_warmup_epochs: 10
 #optim:
-#  clip_grad_norm: True
 #  optimizer: adamW
-#  weight_decay: 1e-5
-#  base_lr: 0.0001
-#  max_epoch: 100
+#  weight_decay: 0.0
+#  base_lr: 0.0005
+#  max_epoch: 200
 #  scheduler: reduce_on_plateau
 #  reduce_factor: 0.5
-#  schedule_patience: 5
-#  min_lr: 1e-6
+#  schedule_patience: 10
+#  min_lr: 1e-5

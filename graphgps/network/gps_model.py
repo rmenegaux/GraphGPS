@@ -19,6 +19,8 @@ class FeatureEncoder(torch.nn.Module):
     def __init__(self, dim_in):
         super(FeatureEncoder, self).__init__()
         self.dim_in = dim_in
+        if cfg.posenc_RWSE.enable and not cfg.posenc_RWSE.precompute:
+            self.rwse_compute = register.edge_encoder_dict['RWSEonthefly']()
         if cfg.dataset.node_encoder:
             # Encode integer node features via nn.Embeddings
             NodeEncoder = register.node_encoder_dict[
@@ -85,6 +87,7 @@ class GPSModel(torch.nn.Module):
                 batch_norm=cfg.gt.batch_norm,
                 bigbird_cfg=cfg.gt.bigbird,
                 layer_args=cfg.gt.layer_args,
+                mask_type=cfg.gt.mask_type,
             ))
         self.layers = torch.nn.Sequential(*layers)
 
