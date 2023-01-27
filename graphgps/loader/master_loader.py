@@ -361,7 +361,7 @@ def preformat_OGB_Graph(dataset_dir, name):
         # Subset graphs to a maximum size (number of nodes) limit.
         # This affects only very few graphs, which crash GPU memory in GraphiT
         pre_transform_in_memory(dataset, partial(clip_graphs_to_size,
-                                                 size_limit=63)) 
+                                                 size_limit=128)) 
     elif name == 'ogbg-code2':
         from graphgps.loader.ogbg_code2_utils import idx2vocab, \
             get_vocab_mapping, augment_edge, encode_y_to_arr

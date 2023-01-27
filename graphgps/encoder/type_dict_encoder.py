@@ -196,6 +196,8 @@ class SPDEdgeEncoder(torch.nn.Module):
 
         self.add_dense_edge_features = dense
 
+        # Path lengths go from 1 to spd_max_length.
+        # Add two types for self-connections and non-connections
         num_types = cfg.dataset.spd_max_length + 2
         if num_types < 1:
             raise ValueError(f"Invalid 'spd_max_length': {num_types}")
