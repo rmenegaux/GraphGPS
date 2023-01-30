@@ -42,6 +42,7 @@ def concat_edge_encoders(encoder_classes, pe_enc_names):
             # Only GraphiT layer uses dense edge features.
             transformer_layer = cfg.gt.layer_type.split('+')[1]
             self.add_dense_edge_features = (transformer_layer == 'GraphiT')
+            self.share_edge_features = cfg.dataset.edge_encoder_shared
             # Whether to add special features for bonds that are part of a ring.
             # if cfg.dataset.rings_coalesce_edges == True, 
             # these features are already taken into account in the `edge_attr`,
@@ -60,6 +61,9 @@ def concat_edge_encoders(encoder_classes, pe_enc_names):
             if self.enc_pe_cls is not None:
                 self.encoder2 = self.enc_pe_cls(pe_dim, dense=self.add_dense_edge_features)
 
+            if self.share_edge_features:
+                self.shared_edge_encoder = SharedEdgeEncoder(dim_emb)
+
         def forward(self, batch):
             batch = self.type_encoder(batch)
             
@@ -70,6 +74,8 @@ def concat_edge_encoders(encoder_classes, pe_enc_names):
                 batch.edge_attr = torch.cat([edge_type_attr, batch.edge_attr], dim=-1)
                 if self.add_dense_edge_features == True:
                     batch.edge_dense = torch.cat([edge_type_dense, batch.edge_dense], dim=-1)
+                if self.share_edge_features == True:
+                    batch = self.shared_edge_encoder(batch)
         
             return batch
 
@@ -106,3 +112,29 @@ for ds_enc_name, ds_enc_cls in edge_ds_encs.items():
             concat_edge_encoders([ds_enc_cls, pe_enc_cls],
                                  [pe_enc_name])
         )
+
+
+@register_edge_encoder('SharedEdge')
+class SharedEdgeEncoder(torch.nn.Module):
+    '''
+    Transforms dense edge features into `edge_att` and `edge_value`.
+    To be shared among GraphiT layers.
+
+    Supposes `batch.edge_dense` has been set.
+    (`batch.edge_dense` set via the DenseEdgeEncoder or the RPE modules)
+    '''
+    def __init__(self, emb_dim):
+        super().__init__()
+
+        self.attention_encoder = torch.nn.Linear(emb_dim, emb_dim)
+        self.value_encoder = torch.nn.Linear(emb_dim, emb_dim) 
+        # torch.nn.init.xavier_uniform_(self.encoder.weight.data)
+
+    def forward(self, batch):
+        '''
+        '''
+        batch.edge_attention = self.attention_encoder(batch.edge_dense)
+        batch.edge_values = self.value_encoder(batch.edge_dense)
+        batch.edge_dense = None # Save space by erasing `edge_dense`
+
+        return batch
