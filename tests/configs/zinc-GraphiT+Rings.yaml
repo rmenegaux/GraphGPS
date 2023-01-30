@@ -16,9 +16,10 @@ dataset:
   node_encoder_bn: False
   edge_encoder: True
   edge_encoder_name: TypeDictEdge+RWSE
+  edge_encoder_shared: True
   edge_encoder_num_types: 4
   edge_encoder_bn: False
-  rings: True
+  rings: False
   rings_max_length: 18
   rings_coalesce_edges: True
 posenc_RWSE:

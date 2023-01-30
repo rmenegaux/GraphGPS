@@ -22,7 +22,7 @@ class GPSLayer(nn.Module):
                  local_gnn_type, global_model_type, num_heads,
                  pna_degrees=None, equivstable_pe=False, dropout=0.0,
                  attn_dropout=0.0, layer_norm=False, batch_norm=True,
-                 bigbird_cfg=None):
+                 bigbird_cfg=None, graphiT_share=False):
         super().__init__()
 
         self.dim_h = dim_h
@@ -97,7 +97,8 @@ class GPSLayer(nn.Module):
         elif global_model_type == "GraphiT":
             self.self_attn = MultiHeadAttentionLayer(
                 dim_h, dim_h, dim_h//num_heads, num_heads,
-                attn_dropout=self.attn_dropout)
+                attn_dropout=self.attn_dropout,
+                share_edge_features=graphiT_share)
             self.linear_attn = nn.Linear(dim_h, dim_h)
         else:
             raise ValueError(f"Unsupported global x-former model: "
@@ -180,7 +181,9 @@ class GPSLayer(nn.Module):
                 h_attn = self.self_attn(h_dense, attention_mask=mask)
             elif self.global_model_type == 'GraphiT':
                 edge_dense = getattr(batch, 'edge_dense', None)
-                h_attn = self.self_attn(h_dense, e=edge_dense, mask=mask)[mask]
+                edge_att = getattr(batch, 'edge_attention', None)
+                edge_values = getattr(batch, 'edge_values', None)
+                h_attn = self.self_attn(h_dense, e=edge_dense, e_att=edge_att, e_value=edge_values, mask=mask)[mask]
                 h_attn = self.linear_attn(h_attn)
             else:
                 raise RuntimeError(f"Unexpected {self.global_model_type}")
