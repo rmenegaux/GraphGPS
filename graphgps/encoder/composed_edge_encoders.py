@@ -10,7 +10,7 @@ from graphgps.encoder.dense_edge_encoder import DenseEdgeEncoder
 from graphgps.encoder.topology_edge_encoder import RingEdgeEncoder
 from graphgps.encoder.linear_edge_encoder import LinearEdgeEncoder
 from graphgps.encoder.dummy_edge_encoder import DummyEdgeEncoder
-from graphgps.encoder.ogb_encoder import Bond1Encoder
+from graphgps.encoder.ogb_encoder import Bond1Encoder, BondEncoderAvg
 
 
 def concat_edge_encoders(encoder_classes, pe_enc_names):
@@ -52,7 +52,7 @@ def concat_edge_encoders(encoder_classes, pe_enc_names):
             type_dim = dim_emb if self.enc_pe_cls is None else (dim_emb // 2)
             self.type_encoder = [self.enc_type_cls(type_dim)]
             if self.add_dense_edge_features:
-                self.type_encoder.append(DenseEdgeEncoder(type_dim))
+                self.type_encoder.append(DenseEdgeEncoder(type_dim, ignore_rings=~add_rings))
             if add_rings:
                 self.type_encoder.append(RingEdgeEncoder(type_dim))
             self.type_encoder = torch.nn.Sequential(*self.type_encoder)
@@ -92,6 +92,7 @@ def concat_edge_encoders(encoder_classes, pe_enc_names):
 # Dataset-specific edge encoders.
 edge_ds_encs = {'Bond': BondEncoder,
                 'Bond1': Bond1Encoder,
+                'BondCustom': BondAvg,
                 'TypeDictEdge': TypeDictEdgeEncoder,
                 'LinearEdge': LinearEdgeEncoder,
                 'Dummy': DummyEdgeEncoder,
