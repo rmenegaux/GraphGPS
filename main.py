@@ -202,23 +202,3 @@ if __name__ == '__main__':
     if args.mark_done:
         os.rename(args.cfg_file, f'{args.cfg_file}_done')
     logging.info(f"[*] All done: {datetime.datetime.now()}")
-
-# connections="feature"
-# edge_out_dim="edge_out_dim"
-# args="name_tag (QK+E_mono)*(V+E_mono)_DptFeat_4seeds wandb.mode 'offline' dataset.dir '/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets/ZINC' n_heads 1 wandb.name '(Q+K+E_multi)*(V*E_multi)_DptConn_noHeads' gt.layer_args '[{${QK_op}:${multiplication}}, {${KE_op}:${addition}}, {${VE_op}:${addition}}, {${dropout_lvl}:${connections}}, {${edge_out_dim}:1}]'"
-
-# cfg_dir="/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/configs/GPS"
-
-# DATASET="zinc"
-# addition="addition"
-# multiplication="multiplication"
-# QK_op="QK_op"
-# KE_op="KE_op"
-# VE_op="VE_op"
-# dropout_lvl="dropout_lvl"
-# connections="connections"
-# edge_out_dim="edge_out_dim"
-# args="name_tag '(Q+K+E_multi)*(V*E_multi)_DptConn_noHeads_4seeds' wandb.mode 'offline' dataset.dir '/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets/ZINC' n_heads 1 wandb.name '(Q+K+E_multi)*(V*E_multi)_DptConn_noHeads' gt.layer_args '[{${QK_op}:${addition}}, {${KE_op}:${addition}}, {${VE_op}:${multiplication}}, {${dropout_lvl}:${connections}}, {${edge_out_dim}:null}]'"
-# run_repeats ${DATASET} GraphiT_EJ_tests ${args}
-
-# wandb sync -p "ZINC_seeds" -e "emmanuel-jehanno" /gpfswork/rech/tbr/ump88gx/GraphGPS/wandb/ZINC-subset/wandb/*
