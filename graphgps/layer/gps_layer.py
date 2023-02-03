@@ -6,7 +6,7 @@ import torch_geometric.nn as pygnn
 from performer_pytorch import SelfAttention
 from torch_geometric.data import Batch
 from torch_geometric.nn import Linear as Linear_pyg
-from torch_geometric.utils import to_dense_batch
+from torch_geometric.utils import to_dense_batch, to_dense_adj, add_self_loops
 
 from graphgps.layer.gatedgcn_layer import GatedGCNLayer
 from graphgps.layer.gine_conv_layer import GINEConvESLapPE
@@ -22,7 +22,7 @@ class GPSLayer(nn.Module):
                  local_gnn_type, global_model_type, num_heads,
                  pna_degrees=None, equivstable_pe=False, dropout=0.0,
                  attn_dropout=0.0, layer_norm=False, batch_norm=True,
-                 bigbird_cfg=None, layer_args=[{}]):
+                 bigbird_cfg=None, layer_args=[{}], mask_type='full'):
         super().__init__()
 
         self.dim_h = dim_h
@@ -31,6 +31,7 @@ class GPSLayer(nn.Module):
         self.layer_norm = layer_norm
         self.batch_norm = batch_norm
         self.equivstable_pe = equivstable_pe
+        self.mask_type = mask_type
 
         # Local message-passing model.
         if local_gnn_type == 'None':
@@ -180,8 +181,18 @@ class GPSLayer(nn.Module):
                 h_attn = self.self_attn(h_dense, attention_mask=mask)
             elif self.global_model_type == 'GraphiT':
                 edge_dense = getattr(batch, 'edge_dense', None)
-                h_attn = self.self_attn(h_dense, edge_features=edge_dense, mask=mask)[mask]
-                h_attn = self.linear_attn(h_attn)
+                n_batch, num_nodes = h_dense.size()[0:2]
+                edge_index, _ = add_self_loops(batch.edge_index)
+                if self.mask_type == 'adj':
+                    attn_mask = to_dense_adj(edge_index, batch.batch)
+                else:
+                    attn_mask = mask.view(-1, num_nodes, 1) * mask.view(-1, 1, num_nodes)
+                attn_mask = attn_mask.view(n_batch, num_nodes, num_nodes, 1, 1)
+                h_attn, self.scores, self.E, self.E_value = self.self_attn(h_dense, edge_features=edge_dense, attn_mask=attn_mask)
+                self.batch = batch
+                h_attn = self.linear_attn(h_attn[mask])
+                # h_attn = self.self_attn(h_dense, edge_features=edge_dense, attn_mask=attn_mask)[mask]
+                # h_attn = self.linear_attn(h_attn)
             else:
                 raise RuntimeError(f"Unexpected {self.global_model_type}")
 

@@ -5,6 +5,7 @@ wandb:
   use: True
   project: ZINC_LayerFinal
   entity: emmanuel-jehanno
+  name: (QK+E)*(V+E)_multi_DptHead
 dataset:
   dir: /home/ejehanno/repos/
   format: PyG-ZINC
@@ -53,8 +54,8 @@ gt:
     - QK_op: multiplication
     - KE_op: addition
     - edge_out_dim: null
-    - dropout_lvl: connections
-    - VE_op: null
+    - dropout_lvl: head
+    - VE_op: addition
 gnn:
   head: san_graph
   layers_pre_mp: 0

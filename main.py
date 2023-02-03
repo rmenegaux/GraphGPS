@@ -173,6 +173,18 @@ if __name__ == '__main__':
         cfg.params = params_count(model)
         logging.info('Num parameters: %s', cfg.params)
         # Start training
+        from torch_geometric.graphgym.checkpoint import load_ckpt
+        start_epoch = load_ckpt(model, optimizer, scheduler,
+                  cfg.train.epoch_resume)
+        print(f'WEIGHTS LOADED FROM EP {start_epoch}')
+        from graphgps.train.custom_train import eval_epoch
+        scores, E, E_value, batch = eval_epoch(loggers[2], loaders[2], model, split='test')
+        torch.save(scores, 'scores_(QK+E)*(V+E)_multi_DptHead.pt')
+        torch.save(E, 'E_(QK+E)*(V+E)_multi_DptHead.pt')
+        torch.save(E_value, 'Ev_(QK+E)*(V+E)_multi_DptHead.pt')
+        torch.save(batch, 'batch_(QK+E)*(V+E)_multi_DptHead.pt')
+        import sys; sys.exit()
+
         if cfg.train.mode == 'standard':
             if cfg.wandb.use:
                 logging.warning("[W] WandB logging is not supported with the "
@@ -190,3 +202,23 @@ if __name__ == '__main__':
     if args.mark_done:
         os.rename(args.cfg_file, f'{args.cfg_file}_done')
     logging.info(f"[*] All done: {datetime.datetime.now()}")
+
+# connections="feature"
+# edge_out_dim="edge_out_dim"
+# args="name_tag (QK+E_mono)*(V+E_mono)_DptFeat_4seeds wandb.mode 'offline' dataset.dir '/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets/ZINC' n_heads 1 wandb.name '(Q+K+E_multi)*(V*E_multi)_DptConn_noHeads' gt.layer_args '[{${QK_op}:${multiplication}}, {${KE_op}:${addition}}, {${VE_op}:${addition}}, {${dropout_lvl}:${connections}}, {${edge_out_dim}:1}]'"
+
+# cfg_dir="/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/configs/GPS"
+
+# DATASET="zinc"
+# addition="addition"
+# multiplication="multiplication"
+# QK_op="QK_op"
+# KE_op="KE_op"
+# VE_op="VE_op"
+# dropout_lvl="dropout_lvl"
+# connections="connections"
+# edge_out_dim="edge_out_dim"
+# args="name_tag '(Q+K+E_multi)*(V*E_multi)_DptConn_noHeads_4seeds' wandb.mode 'offline' dataset.dir '/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets/ZINC' n_heads 1 wandb.name '(Q+K+E_multi)*(V*E_multi)_DptConn_noHeads' gt.layer_args '[{${QK_op}:${addition}}, {${KE_op}:${addition}}, {${VE_op}:${multiplication}}, {${dropout_lvl}:${connections}}, {${edge_out_dim}:null}]'"
+# run_repeats ${DATASET} GraphiT_EJ_tests ${args}
+
+# wandb sync -p "ZINC_seeds" -e "emmanuel-jehanno" /gpfswork/rech/tbr/ump88gx/GraphGPS/wandb/ZINC-subset/wandb/*

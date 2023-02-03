@@ -51,11 +51,12 @@ def eval_epoch(logger, loader, model, split='val'):
     model.eval()
     time_start = time.time()
     for batch in loader:
-        batch.split = split
+        #batch.split = split
         batch.to(torch.device(cfg.device))
         if cfg.gnn.head == 'inductive_edge':
             pred, true, extra_stats = model(batch)
         else:
+            return model(batch)
             pred, true = model(batch)
             extra_stats = {}
         if cfg.dataset.name == 'ogbg-code2':
@@ -108,7 +109,7 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
         else:
             wandb_name = cfg.wandb.name
         run = wandb.init(entity=cfg.wandb.entity, project=cfg.wandb.project,
-                name=wandb_name, mode=cfg.wandb.mode, dir=make_wandb_dir(cfg))
+                name=wandb_name, mode=cfg.wandb.mode, dir=getattr(cfg.wandb, 'dir', make_wandb_dir(cfg)))
         run.config.update(cfg_to_dict(cfg))
 
     num_splits = len(loggers)
@@ -260,3 +261,54 @@ def inference_only(loggers, loaders, model, optimizer=None, scheduler=None):
     logging.info(f'Done! took: {time.perf_counter() - start_time:.2f}s')
     for logger in loggers:
         logger.close()
+
+# run/run_experiments_Q+K+E_multi_V+E_multi_noHeads_DoubleScaling.sh
+# run/run_experiments_Q+K+E_multi_VE_multi_noHeads_DoubleScaling.sh
+# run/run_experiments_Q+K+E_multi_V+E_multi_noHeads.sh
+
+# run/run_experiments_QK+E_mono_V+E_multi.sh
+# run/run_experiments_QK+E_mono_V.sh
+# run/run_experiments_QK+E_multi_V+E_multi_AdjMask_noRings.sh
+# run/run_experiments_QK+E_multi_V+E_multi_AdjMask.sh
+# run/run_experiments_Q+K+E_multi_V+E_multi_noHeads_DoubleScaling.sh
+# run/run_experiments_Q+K+E_multi_VE_multi_noHeads_DoubleScaling.sh
+# run/run_experiments_Q+K+E_multi_V+E_multi_noHeads.sh
+# run/run_experiments_E_multi_V+E_multi.sh
+# run/run_experiments_GINE+GraphiT.sh
+
+# 695442 QK+E_mono_V_DptConn_4seeds 382885
+# 695456 695479 695485 695491 695499 695501 695523
+
+# 69* sauf 691582
+# 696046
+# 696048
+# 696098
+# 696100
+# 696101
+# 696103
+# 698001
+# 698000
+# 698004
+# 698027
+# 698031
+# 698008
+# 698023
+# 698025
+
+# pcqm:
+# 700961
+# 700962
+# 700963
+# 700964
+# 701024
+# 701025
+# 701026
+# 701027
+# 701035
+# 701036
+# 701037
+# 701038
+# 701040
+# 701042
+# 701043
+# 701044

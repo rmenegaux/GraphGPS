@@ -145,3 +145,38 @@ def get_rings(edge_index, max_k=7):
 
     rings = list(rings)
     return rings
+
+def get_SPD(edge_index):
+    import graph_tool as gt
+    import graph_tool.topology as top
+    import networkx as nx
+
+    if isinstance(edge_index, torch.Tensor):
+        edge_index = edge_index.numpy()
+
+    edge_list = edge_index.T
+    graph_gt = gt.Graph(directed=False)
+    graph_gt.add_edge_list(edge_list)
+    gt.stats.remove_self_loops(graph_gt)
+    gt.stats.remove_parallel_edges(graph_gt)
+    # Ok so now we have the graph entity to work on with networkx
+    import pdb;pdb.set_trace()
+    nodes = set(edge_index[:,0]) # all nodes
+    SPD = nx.all_shortest_paths_lengths(graph_gt, nodes, nodes)
+    return SPD
+
+    for k in range(3, max_k+1):
+        pattern = nx.cycle_graph(k)
+        pattern_edge_list = list(pattern.edges)
+        pattern_gt = gt.Graph(directed=False)
+        pattern_gt.add_edge_list(pattern_edge_list)
+        sub_isos = top.subgraph_isomorphism(pattern_gt, graph_gt, induced=True, subgraph=True,
+                                           generator=True)
+        sub_iso_sets = map(lambda isomorphism: tuple(isomorphism.a), sub_isos)
+        for iso in sub_iso_sets:
+            if tuple(sorted(iso)) not in sorted_rings:
+                rings.add(iso)
+                sorted_rings.add(tuple(sorted(iso)))
+
+    rings = list(rings)
+    return rings

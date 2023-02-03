@@ -26,6 +26,7 @@ __pycache__/
 *.log
 *.bak
 OAR*
+**.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

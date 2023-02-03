@@ -85,6 +85,7 @@ class GPSModel(torch.nn.Module):
                 batch_norm=cfg.gt.batch_norm,
                 bigbird_cfg=cfg.gt.bigbird,
                 layer_args=cfg.gt.layer_args,
+                mask_type=cfg.gt.mask_type,
             ))
         self.layers = torch.nn.Sequential(*layers)
 
@@ -92,6 +93,19 @@ class GPSModel(torch.nn.Module):
         self.post_mp = GNNHead(dim_in=cfg.gnn.dim_inner, dim_out=dim_out)
 
     def forward(self, batch):
+        all_scores = []
+        all_E = []
+        all_E_value = []
+        i = 0
         for module in self.children():
             batch = module(batch)
+            if i==1:
+                for idx in range(len(module)):
+                    all_scores.append((module[idx].scores))
+                    all_E.append((module[idx].E))
+                    all_E_value.append((module[idx].E_value))
+                    saved_batch = module[idx].batch
+            i+=1
+
+        return all_scores, all_E, all_E_value, saved_batch
         return batch
