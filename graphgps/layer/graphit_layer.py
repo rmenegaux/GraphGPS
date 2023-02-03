@@ -70,7 +70,7 @@ class GraphiT_Layer(nn.Module):
         self.Q = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
         self.K = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
         if self.use_edge_features:
-            assert (self.QK_op in ['multiplication', 'addition']) and (self.KE_op in ['multiplication', 'addition'])
+            # assert (self.QK_op in ['multiplication', 'addition']) and (self.KE_op in ['multiplication', 'addition'])
             self.edge_out_dim = 1 if (self.QK_op=='multiplication' and self.KE_op=='addition' and edge_out_dim==1) else out_dim
             self.E = nn.Linear(in_dim_edges, self.edge_out_dim * num_heads, bias=use_bias)
             # E_value will always be multi
@@ -80,8 +80,8 @@ class GraphiT_Layer(nn.Module):
 
         self.attn_dropout = nn.Dropout(p=attn_dropout)
 
-    def forward(self, h, edge_features=None, mask=None):
-        
+    def forward(self, h, edge_features=None, attn_mask=None):
+
         Q = self.Q(h)  # [n_batch, num_nodes, out_dim * num_heads]
         K = self.K(h)  # [n_batch, num_nodes, out_dim * num_heads]
         V = self.V(h)  # [n_batch, num_nodes, out_dim * num_heads]
@@ -97,6 +97,7 @@ class GraphiT_Layer(nn.Module):
         # Normalize by sqrt(head dimension)
         scaling = float(self.out_dim) ** -0.5
         K = K * scaling
+        # Q = Q * scaling # must be uncommented for DoubleScaling
 
         if self.use_edge_features:
             E = self.E(edge_features)  # [n_batch, num_nodes, num_nodes, out_dim * num_heads]
@@ -106,14 +107,17 @@ class GraphiT_Layer(nn.Module):
                     scores = torch.einsum('bihk,bjhk,bijhk->bijh', Q, K, E).unsqueeze(-1)
                 else: # means addition, # Attention is Q . K + E(multi_dim or scalar)
                     scores = torch.einsum('bihk,bjhk->bijh', Q, K).unsqueeze(-1) + E  # eventually it ends with dimension of 1
-            
+
+            elif self.QK_op is None:
+                scores = E
+
             else: # means addition, Attention is Q + K + E
                 scores = Q.unsqueeze(2) + K.unsqueeze(1) + E  # (bi1hk + b1jhk + bijhk)
 
             # scores is in bijhk, with k being eventually 1
 
         # Mask to -np.inf such that exp is 0 and you can sum over it as a softmax
-        attn_mask = mask.view(-1, num_nodes, 1, 1, 1) * mask.view(-1, 1, num_nodes, 1, 1)  # [n_batch, num_nodes, num_nodes, 1, 1]
+        #attn_mask = mask.view(-1, num_nodes, 1, 1, 1) * mask.view(-1, 1, num_nodes, 1, 1)  # [n_batch, num_nodes, num_nodes, 1, 1]
         #scores = torch.sparse.softmax((attn_mask * scores).to_sparse(), dim=2).to_dense()
         scores = torch.nn.functional.softmax(torch.where(attn_mask == 0, -float('inf'), scores.double()), dim=2)
         scores = torch.where(scores.isnan(), 0., scores)

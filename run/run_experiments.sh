@@ -24,7 +24,7 @@ function run_repeats {
     echo "  output dir: ${out_dir}"
 
     # Run each repeat as a separate job
-    for SEED in {0..9}; do
+    for SEED in {0..1}; do
         script="sbatch -J ${cfg_suffix}-${dataset} run/wrapper.sb ${main} --repeat 1 seed ${SEED} ${common_params}"
         echo $script
         eval $script
@@ -48,9 +48,19 @@ done
 # Comment-out runs that you don't want to submit.
 cfg_dir="configs/GPS"
 
-DATASET="zinc"
-run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.10runs"
+DATASET="zinc"cfg_dir="configs/GPS"
 
+DATASET="zinc"
+addition="addition"
+multiplication="multiplication"
+QK_op="QK_op"
+KE_op="KE_op"
+VE_op="VE_op"
+dropout_lvl="dropout_lvl"
+connections="connections"
+edge_out_dim="edge_out_dim"
+args="name_tag (Q+K+E_multi)*(V*E_multi)_DptConn_noHeads_4seeds wandb.mode 'offline' dataset.dir '/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets/ZINC' n_heads 1 wandb.name '(Q+K+E_multi)*(V*E_multi)_DptConn_noHeads' gt.layer_args '[{${QK_op}:${addition}}, {${KE_op}:${addition}}, {${VE_op}:${multiplication}}, {${dropout_lvl}:${connections}}, {${edge_out_dim}:null}]'"
+run_repeats ${DATASET} GraphiT_EJ_tests "${args}"
 
 # DATASET="mnist"
 # run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.10run"
