@@ -24,6 +24,7 @@ def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation)
         start = time.time()
         batch.split = 'train'
         batch.to(torch.device(cfg.device))
+        
         mdl_start = time.time()
         pred, true = model(batch)
         print(f'Model forward took {time.time()-mdl_start:.3e} seconds')
