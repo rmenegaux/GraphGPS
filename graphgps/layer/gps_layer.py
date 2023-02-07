@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import torch
 import torch.nn as nn
@@ -188,11 +189,19 @@ class GPSLayer(nn.Module):
                 else:
                     attn_mask = mask.view(-1, num_nodes, 1) * mask.view(-1, 1, num_nodes)
                 attn_mask = attn_mask.view(n_batch, num_nodes, num_nodes, 1, 1)
-                h_attn = self.self_attn(h_dense, edge_features=edge_dense, attn_mask=attn_mask)[mask]
+                layer_start = time.time()
+                h_attn = self.self_attn(h_dense, edge_features=edge_dense, attn_mask=attn_mask)
+                print(f'LAYER: 1) GraphiT fwd took {time.time()-layer_start:.3e} seconds')
+                msk = time.time()
+                h_attn = h_attn[mask]
+                #import pdb; pdb.set_trace()
+                #h_attn = h_attn.masked_select(mask.unsqueeze(-1).expand(*h_attn.shape)).view(-1, h_attn.shape[-1])
+                print(f'LAYER: 2) Masking took {time.time()-msk:.3e} seconds')
                 h_attn = self.linear_attn(h_attn)
             else:
                 raise RuntimeError(f"Unexpected {self.global_model_type}")
 
+            drpt_BN = time.time()
             h_attn = self.dropout_attn(h_attn)
             h_attn = h_in1 + h_attn  # Residual connection.
             if self.layer_norm:
@@ -200,9 +209,11 @@ class GPSLayer(nn.Module):
             if self.batch_norm:
                 h_attn = self.norm1_attn(h_attn)
             h_out_list.append(h_attn)
+            # print(f'LAYER: 2) Dropout and Batch Norm took {time.time()-drpt_BN:.3e} seconds')
 
         # Combine local and global outputs.
         # h = torch.cat(h_out_list, dim=-1)
+        sum_ff_bn = time.time()
         h = sum(h_out_list)
 
         # Feed Forward block.
@@ -211,6 +222,7 @@ class GPSLayer(nn.Module):
             h = self.norm2(h, batch.batch)
         if self.batch_norm:
             h = self.norm2(h)
+        # print(f'LAYER: 3) Agg, FF and Batch Norm took {time.time()-sum_ff_bn:.3e} seconds')
 
         batch.x = h
         return batch

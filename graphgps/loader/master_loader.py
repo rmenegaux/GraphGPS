@@ -413,9 +413,11 @@ def preformat_OGB_PCQM4Mv2(dataset_dir, name):
                       ]
     elif name == 'subset':
         # Further subset the training set for faster debugging.
-        subset_ratio = 0.1
+        #subset_ratio = 0.1
+        subset_ratio = 0.001
         subtrain_idx = train_idx[:int(subset_ratio * len(train_idx))]
-        subvalid_idx = valid_idx[:50000]
+        #subvalid_idx = valid_idx[:50000]
+        subvalid_idx = valid_idx[:500]
         subtest_idx = split_idx['valid']  # The original 'valid' as testing set.
         dataset = dataset[torch.cat([subtrain_idx, subvalid_idx, subtest_idx])]
         n1, n2, n3 = len(subtrain_idx), len(subvalid_idx), len(subtest_idx)

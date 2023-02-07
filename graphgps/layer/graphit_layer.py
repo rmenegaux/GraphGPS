@@ -82,6 +82,7 @@ class GraphiT_Layer(nn.Module):
 
     def forward(self, h, edge_features=None, attn_mask=None):
 
+        mat_comp = time.time()
         Q = self.Q(h)  # [n_batch, num_nodes, out_dim * num_heads]
         K = self.K(h)  # [n_batch, num_nodes, out_dim * num_heads]
         V = self.V(h)  # [n_batch, num_nodes, out_dim * num_heads]
@@ -98,7 +99,9 @@ class GraphiT_Layer(nn.Module):
         scaling = float(self.out_dim) ** -0.5
         K = K * scaling
         # Q = Q * scaling # must be uncommented for DoubleScaling
+        # print(f'MODEL: 1) matrix computation took {time.time()-mat_comp:.3e} seconds')
 
+        qke = time.time()
         if self.use_edge_features:
             E = self.E(edge_features)  # [n_batch, num_nodes, num_nodes, out_dim * num_heads]
             E = E.view(n_batch, num_nodes, num_nodes, self.num_heads, -1)  # [n_batch, num_nodes, num_nodes, num_heads, out_dim or 1]
@@ -115,13 +118,17 @@ class GraphiT_Layer(nn.Module):
                 scores = Q.unsqueeze(2) + K.unsqueeze(1) + E  # (bi1hk + b1jhk + bijhk)
 
             # scores is in bijhk, with k being eventually 1
+        # print(f'MODEL: 2) QKE took {time.time()-qke:.3e} seconds')
 
         # Mask to -np.inf such that exp is 0 and you can sum over it as a softmax
         #attn_mask = mask.view(-1, num_nodes, 1, 1, 1) * mask.view(-1, 1, num_nodes, 1, 1)  # [n_batch, num_nodes, num_nodes, 1, 1]
         #scores = torch.sparse.softmax((attn_mask * scores).to_sparse(), dim=2).to_dense()
+        sftmx = time.time()
         scores = torch.nn.functional.softmax(torch.where(attn_mask == 0, -float('inf'), scores.double()), dim=2)
         scores = torch.where(scores.isnan(), 0., scores)
+        # print(f'MODEL: 3) softmax took {time.time()-sftmx:.3e} seconds')
         
+        drpt = time.time()
         # Then dropout the scores.
         if self.dropout_lvl == 'feature':  # We drop some features for each head
             attn_mask = attn_mask.expand(n_batch, num_nodes, num_nodes, self.num_heads, self.out_dim) # to remove only some output connection features for some heads
@@ -131,7 +138,9 @@ class GraphiT_Layer(nn.Module):
             attn_mask = attn_mask[:,:,0].view(n_batch, num_nodes, 1, 1, 1)
         # Default is: We drop some connections for each node (all their heads)
         scores = scores * self.attn_dropout(attn_mask.float())  # Zeros-out elements along last dimension
+        # print(f'MODEL: 4) dropout took {time.time()-drpt:.3e} seconds')
 
+        scores_ve = time.time()
         # Compute with Value matrix to finish attention, out size: [n_batch, num_nodes, num_heads, out_dim]
         V = V.double()
         if self.VE_op is not None:
@@ -163,10 +172,14 @@ class GraphiT_Layer(nn.Module):
                 h = torch.einsum('bijhl,bjhk->bihk', scores, V)
             else:
                 h = torch.einsum('bijhk,bjhk->bihk', scores, V)
+        # print(f'MODEL: 5) scores*VE took {time.time()-scores_ve:.3e} seconds')
+        
         # Concatenate attention heads
+        rshp = time.time()
         try: # FIXME
             h = h.view(n_batch, num_nodes, -1).float()  # [n_batch, num_nodes, out_dim * num_heads]
         except:
             h = h.reshape(n_batch, num_nodes, -1).float()
+        # print(f'MODEL: 6) reshape took {time.time()-rshp:.3e} seconds')
 
         return h

@@ -1,3 +1,4 @@
+import time
 import torch
 import torch_geometric.graphgym.register as register
 from torch_geometric.graphgym.config import cfg
@@ -94,5 +95,7 @@ class GPSModel(torch.nn.Module):
 
     def forward(self, batch):
         for module in self.children():
+            mdl_fwd = time.time()
             batch = module(batch)
+            #print(f'{module.__name__} forward took {time.time()-mdl_fwd:.3e} seconds')
         return batch
