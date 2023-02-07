@@ -2,7 +2,7 @@ out_dir: results
 metric_best: mae
 metric_agg: argmin
 wandb:
-  use: True
+  use: False
   project: pcqm4m-subset
   entity: emmanuel-jehanno
   name: (QK+E)*(V+E)_multi_DptConn
