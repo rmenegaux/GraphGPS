@@ -92,7 +92,7 @@ def concat_edge_encoders(encoder_classes, pe_enc_names):
 # Dataset-specific edge encoders.
 edge_ds_encs = {'Bond': BondEncoder,
                 'Bond1': Bond1Encoder,
-                'BondCustom': BondAvg,
+                'BondCustom': BondEncoderAvg,
                 'TypeDictEdge': TypeDictEdgeEncoder,
                 'LinearEdge': LinearEdgeEncoder,
                 'Dummy': DummyEdgeEncoder,

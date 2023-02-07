@@ -54,6 +54,7 @@ def concat_node_encoders(encoder_classes, pe_enc_names):
                 self.encoder2 = self.enc2_cls(dim_emb, expand_x=False)
 
         def forward(self, batch):
+            import pdb; pdb.set_trace()
             batch = self.encoder1(batch)
             batch = self.encoder2(batch)
             return batch
