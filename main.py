@@ -179,10 +179,10 @@ if __name__ == '__main__':
         print(f'WEIGHTS LOADED FROM EP {start_epoch}')
         from graphgps.train.custom_train import eval_epoch
         scores, E, E_value, batch = eval_epoch(loggers[2], loaders[2], model, split='test')
-        torch.save(scores, 'scores_(QK+E)*(V+E)_multi_DptHead.pt')
-        torch.save(E, 'E_(QK+E)*(V+E)_multi_DptHead.pt')
-        torch.save(E_value, 'Ev_(QK+E)*(V+E)_multi_DptHead.pt')
-        torch.save(batch, 'batch_(QK+E)*(V+E)_multi_DptHead.pt')
+        torch.save(scores, 'scores_(QK+E)*(V+E)_multi_DptConn.pt')
+        torch.save(E, 'E_(QK+E)*(V+E)_multi_DptConn.pt')
+        torch.save(E_value, 'Ev_(QK+E)*(V+E)_multi_DptConn.pt')
+        torch.save(batch, 'batch_(QK+E)*(V+E)_multi_DptConn.pt')
         import sys; sys.exit()
 
         if cfg.train.mode == 'standard':
