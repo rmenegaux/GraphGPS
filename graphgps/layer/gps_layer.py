@@ -172,7 +172,8 @@ class GPSLayer(nn.Module):
 
         # Multi-head attention.
         if self.self_attn is not None:
-            h_dense, mask = to_dense_batch(h, batch.batch)
+            # h_dense, mask = to_dense_batch(h, batch.batch)
+            h_dense, mask = batch.x, batch.mask
             if self.global_model_type == 'Transformer':
                 h_attn = self._sa_block(h_dense, None, ~mask)[mask]
             elif self.global_model_type == 'Performer':
@@ -183,7 +184,7 @@ class GPSLayer(nn.Module):
                 edge_dense = getattr(batch, 'edge_dense', None)
                 edge_att = getattr(batch, 'edge_attention', None)
                 edge_values = getattr(batch, 'edge_values', None)
-                h_attn = self.self_attn(h_dense, e=edge_dense, e_att=edge_att, e_value=edge_values, mask=mask)[mask]
+                h_attn = self.self_attn(h_dense, e=edge_dense, e_att=edge_att, e_value=edge_values, mask=mask)#[mask]
                 h_attn = self.linear_attn(h_attn)
             else:
                 raise RuntimeError(f"Unexpected {self.global_model_type}")
@@ -193,7 +194,7 @@ class GPSLayer(nn.Module):
             if self.layer_norm:
                 h_attn = self.norm1_attn(h_attn, batch.batch)
             if self.batch_norm:
-                h_attn = self.norm1_attn(h_attn)
+                h_attn = self.norm1_attn(h_attn.transpose(1,2)).transpose(1,2)
             h_out_list.append(h_attn)
 
         # Combine local and global outputs.
@@ -205,7 +206,7 @@ class GPSLayer(nn.Module):
         if self.layer_norm:
             h = self.norm2(h, batch.batch)
         if self.batch_norm:
-            h = self.norm2(h)
+            h_attn = self.norm2(h_attn.transpose(1,2)).transpose(1,2)
 
         batch.x = h
         return batch
