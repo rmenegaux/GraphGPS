@@ -11,11 +11,11 @@ dataset:
   task_type: regression
   transductive: False
   node_encoder: True
-  node_encoder_name: TypeDictNode+RWSE
+  node_encoder_name: TypeDictNode
   node_encoder_num_types: 28
   node_encoder_bn: False
   edge_encoder: True
-  edge_encoder_name: TypeDictEdge+RWSE
+  edge_encoder_name: TypeDictEdge+None
   edge_encoder_shared: True
   edge_encoder_num_types: 4
   edge_encoder_bn: False
@@ -23,7 +23,7 @@ dataset:
   rings_max_length: 18
   rings_coalesce_edges: True
 posenc_RWSE:
-  enable: True
+  enable: False
   kernel:
     times_func: range(1,21)
   model: Linear

@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch_geometric.utils import to_dense_batch
 
 import numpy as np
+import time
 
 """
     GraphiT-GT
@@ -47,7 +48,11 @@ class MultiHeadAttentionLayer(nn.Module):
 
         
     def forward(self, h, e=None, e_att=None, e_value=None, mask=None):
-        
+        # start = torch.cuda.Event(enable_timing=True)
+        # end = torch.cuda.Event(enable_timing=True)
+        # start.record()
+        # t0 = time.time()
+
         Q_h = self.Q(h) # [n_batch, num_nodes, out_dim * num_heads]
         K_h = self.K(h)
         V_h = self.V(h)
@@ -64,8 +69,13 @@ class MultiHeadAttentionLayer(nn.Module):
         # Normalize by sqrt(head dimension)
         scaling = float(self.out_dim) ** -0.5
         K_h = K_h * scaling
+
+        # scores = torch.einsum('bihk,bjhk->bijh', Q_h, K_h).unsqueeze(-1)
+        scores = torch.matmul(
+            Q_h.permute(0, 2, 1, 3),
+            K_h.permute(0, 2, 3, 1)
+        ).permute(0, 2, 3, 1).unsqueeze(-1)
         
-        scores = torch.einsum('bihk,bjhk->bijh', Q_h, K_h).unsqueeze(-1)
         # scores = Q_h.unsqueeze(1) + K_h.unsqueeze(2)
         E_att = e_att if self.share_edge_features else self.E_att(e)
         E_value = e_value if self.share_edge_features else self.E_value(e)
@@ -91,11 +101,38 @@ class MultiHeadAttentionLayer(nn.Module):
 
         # h = scores @ V_h # [n_batch, num_heads, num_nodes, out_dim]
         # h = torch.einsum('bhij,bhjk,bijhk->bhik', scores, V_h, E)
-        h = torch.einsum('bijhk,bjhk->bihk', scores, V_h)
+
+        # h = torch.einsum('bijhk,bjhk->bihk', scores, V_h)
+        # import pdb; pdb.set_trace()
+        h = torch.matmul(
+            scores.permute(0, 3, 4, 1, 2).contiguous(),
+            V_h.permute(0, 2, 3, 1).unsqueeze(-1).contiguous()
+            ).squeeze(-1).permute(0, 3, 1, 2)
+
+
+        # h = torch.einsum('bijhk,bjhk->bihk', scores, V_h)
+        # torch.matmul(
+        #    scores.permute(0, 3, 4, 1, 2).unsqueeze(-2),
+        #     E_value.view(n_batch, num_nodes, num_nodes, self.num_heads, self.out_dim).permute(0, 3, 4, 1, 2).unsqueeze(-1)
+        #    )
+
         h = h + (scores * E_value.view(n_batch, num_nodes, num_nodes, self.num_heads, self.out_dim)).sum(2)
+        
         # Normalize scores
         h = h / softmax_denom
         # Concatenate attention heads
         h = h.view(-1, num_nodes, self.num_heads * self.out_dim) # [n_batch, num_nodes, out_dim * num_heads]
+        
+        # end.record()
 
+        # Waits for everything to finish running
+        # torch.cuda.synchronize()
+        # torch.cuda.current_stream().synchronize()
+        # t1 = time.time()
+
+        # print('all in all {:.2f} ms'.format((t1-t0)*1000))
+
+        # print('all in all ', start.elapsed_time(end))
+
+        # import pdb; pdb.set_trace()
         return h
