@@ -74,8 +74,8 @@ def concat_edge_encoders(encoder_classes, pe_enc_names):
                 batch.edge_attr = torch.cat([edge_type_attr, batch.edge_attr], dim=-1)
                 if self.add_dense_edge_features == True:
                     batch.edge_dense = torch.cat([edge_type_dense, batch.edge_dense], dim=-1)
-                if self.share_edge_features == True:
-                    batch = self.shared_edge_encoder(batch)
+            if self.share_edge_features == True:
+                batch = self.shared_edge_encoder(batch)
         
             return batch
 
