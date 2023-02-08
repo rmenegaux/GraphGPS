@@ -6,6 +6,7 @@ from torch_geometric.graphgym.models.gnn import GNNPreMP
 from torch_geometric.graphgym.models.layer import (new_layer_config,
                                                    BatchNorm1dNode)
 from torch_geometric.graphgym.register import register_network
+from torch_geometric.utils import to_dense_batch
 
 from graphgps.layer.gps_layer import GPSLayer
 
@@ -46,6 +47,7 @@ class FeatureEncoder(torch.nn.Module):
     def forward(self, batch):
         for module in self.children():
             batch = module(batch)
+        batch.x, batch.mask = to_dense_batch(batch.x, batch.batch)
         return batch
 
 
@@ -97,5 +99,5 @@ class GPSModel(torch.nn.Module):
         for module in self.children():
             mdl_fwd = time.time()
             batch = module(batch)
-            #print(f'{module.__name__} forward took {time.time()-mdl_fwd:.3e} seconds')
+            print(f'{module.__class__} forward took {time.time()-mdl_fwd:.3e} seconds')
         return batch

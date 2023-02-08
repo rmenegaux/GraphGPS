@@ -137,10 +137,12 @@ class GPSLayer(nn.Module):
         self.ff_dropout2 = nn.Dropout(dropout)
 
     def forward(self, batch):
+        fwd_init = time.time()
         h = batch.x
         h_in1 = h  # for first residual connection
 
         h_out_list = []
+        #print(f'LAYER: 0) Init took {time.time()-fwd_init:.3e} seconds')
         # Local MPNN with edge attributes.
         if self.local_model is not None:
             self.local_model: pygnn.conv.MessagePassing  # Typing hint.
@@ -173,7 +175,10 @@ class GPSLayer(nn.Module):
 
         # Multi-head attention.
         if self.self_attn is not None:
-            h_dense, mask = to_dense_batch(h, batch.batch)
+            # h_dense, mask = to_dense_batch(h, batch.batch)
+            btch_acc = time.time()
+            h_dense, mask = batch.x, batch.mask
+            # print(f'LAYER: 1) Accessing batch attributes took {time.time()-btch_acc:.3e} seconds')
             if self.global_model_type == 'Transformer':
                 h_attn = self._sa_block(h_dense, None, ~mask)[mask]
             elif self.global_model_type == 'Performer':
@@ -181,25 +186,30 @@ class GPSLayer(nn.Module):
             elif self.global_model_type == 'BigBird':
                 h_attn = self.self_attn(h_dense, attention_mask=mask)
             elif self.global_model_type == 'GraphiT':
+                ed = time.time()
                 edge_dense = getattr(batch, 'edge_dense', None)
+                #print(f'LAYER: 1) Edge Dense took {time.time()-ed:.3e} seconds')
                 n_batch, num_nodes = h_dense.size()[0:2]
-                edge_index, _ = add_self_loops(batch.edge_index)
                 if self.mask_type == 'adj':
+                    edge_index, _ = add_self_loops(batch.edge_index)
                     attn_mask = to_dense_adj(edge_index, batch.batch)
                 else:
+                    am = time.time()
                     attn_mask = mask.view(-1, num_nodes, 1) * mask.view(-1, 1, num_nodes)
+                    #print(f'LAYER: 3) Attention Mask took {time.time()-am:.3e} seconds')
                 attn_mask = attn_mask.view(n_batch, num_nodes, num_nodes, 1, 1)
                 layer_start = time.time()
                 h_attn = self.self_attn(h_dense, edge_features=edge_dense, attn_mask=attn_mask)
-                print(f'LAYER: 1) GraphiT fwd took {time.time()-layer_start:.3e} seconds')
-                msk = time.time()
-                h_attn = h_attn[mask]
+                #print(f'LAYER: 4) GraphiT fwd took {time.time()-layer_start:.3e} seconds')
+                # h_attn = h_attn[mask]
                 #import pdb; pdb.set_trace()
                 #h_attn = h_attn.masked_select(mask.unsqueeze(-1).expand(*h_attn.shape)).view(-1, h_attn.shape[-1])
-                print(f'LAYER: 2) Masking took {time.time()-msk:.3e} seconds')
+                lin = time.time()
                 h_attn = self.linear_attn(h_attn)
+                #print(f'LAYER: 5) linear took {time.time()-lin:.3e} seconds')
             else:
                 raise RuntimeError(f"Unexpected {self.global_model_type}")
+            #print(f'LAYER: 1) Self Attention took {time.time()-btch_acc:.3e} seconds')
 
             drpt_BN = time.time()
             h_attn = self.dropout_attn(h_attn)
@@ -207,9 +217,9 @@ class GPSLayer(nn.Module):
             if self.layer_norm:
                 h_attn = self.norm1_attn(h_attn, batch.batch)
             if self.batch_norm:
-                h_attn = self.norm1_attn(h_attn)
+                h_attn = self.norm1_attn(h_attn.transpose(1, 2)).transpose(1, 2)
             h_out_list.append(h_attn)
-            # print(f'LAYER: 2) Dropout and Batch Norm took {time.time()-drpt_BN:.3e} seconds')
+            #print(f'LAYER: 2) Dropout and Batch Norm took {time.time()-drpt_BN:.3e} seconds')
 
         # Combine local and global outputs.
         # h = torch.cat(h_out_list, dim=-1)
@@ -221,10 +231,13 @@ class GPSLayer(nn.Module):
         if self.layer_norm:
             h = self.norm2(h, batch.batch)
         if self.batch_norm:
-            h = self.norm2(h)
-        # print(f'LAYER: 3) Agg, FF and Batch Norm took {time.time()-sum_ff_bn:.3e} seconds')
+            h = self.norm2(h.transpose(1, 2)).transpose(1, 2)
+        #print(f'LAYER: 3) Agg, FF and Batch Norm took {time.time()-sum_ff_bn:.3e} seconds')
 
+        btch_sv = time.time()
         batch.x = h
+        #print(f'LAYER: 4) Batch attr saving took {time.time()-btch_sv:.3e} seconds')
+        #print(f'LAYER: TOTAL took {time.time()-fwd_init:.3e} seconds')
         return batch
 
     def _sa_block(self, x, attn_mask, key_padding_mask):

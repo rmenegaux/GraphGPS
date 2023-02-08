@@ -19,14 +19,14 @@ def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation)
     time_start = time.time()
     for i in range(10):
         _ = next(iter(loader))
-    # print(f'Loading a batch takes {(time.time()-time_start)/10:.3e} seconds')
+    print(f'Loading a batch takes {(time.time()-time_start)/10:.3e} seconds')
     for itr, batch in enumerate(loader):
         start = time.time()
         batch.split = 'train'
         batch.to(torch.device(cfg.device))
         mdl_start = time.time()
         pred, true = model(batch)
-        # print(f'Model forward took {time.time()-mdl_start:.3e} seconds')
+        print(f'Model forward took {time.time()-mdl_start:.3e} seconds')
         loss_start = time.time()
         if cfg.dataset.name == 'ogbg-code2':
             loss, pred_score = subtoken_cross_entropy(pred, true)
@@ -36,17 +36,17 @@ def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation)
             loss, pred_score = compute_loss(pred, true)
             _true = true.detach().to('cpu', non_blocking=True)
             _pred = pred_score.detach().to('cpu', non_blocking=True)
-        # print(f'Loss computation took {time.time()-loss_start:.3e} seconds')
+        print(f'Loss computation took {time.time()-loss_start:.3e} seconds')
         bckwd_start = time.time()
         loss.backward()
-        # print(f'Loss backward took {time.time()-bckwd_start:.3e} seconds')
+        print(f'Loss backward took {time.time()-bckwd_start:.3e} seconds')
         # Parameters update after accumulating gradients for given num. batches.
         if ((itr + 1) % batch_accumulation == 0) or (itr + 1 == len(loader)):
             if cfg.optim.clip_grad_norm:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt_start = time.time()
             optimizer.step()
-            # print(f'Optimizer step took {time.time()-opt_start:.3e} seconds')
+            print(f'Optimizer step took {time.time()-opt_start:.3e} seconds')
             optimizer.zero_grad()
         log_start = time.time()
         logger.update_stats(true=_true,
@@ -56,8 +56,8 @@ def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation)
                             time_used=time.time() - time_start,
                             params=cfg.params,
                             dataset_name=cfg.dataset.name)
-        # print(f'Loggger update took {time.time()-log_start:.3e}')
-        # print(f'Batch {itr} took {time.time()-start:.3e} seconds')
+        print(f'Loggger update took {time.time()-log_start:.3e}')
+        print(f'Batch {itr} took {time.time()-start:.3e} seconds')
     time_start = time.time()
 
 

@@ -143,3 +143,18 @@ def format_dataset_name(cfg):
             dataset_name += cfg.dataset.name
     return dataset_name
 
+def timer(foo):
+    def func(*args, **kwargs):
+        start = torch.cuda.Event(enable_timing=True)
+        end = torch.cuda.Event(enable_timing=True)
+
+        start.record()
+        out = foo(*args, **kwargs)
+        end.record()
+
+        # Waits for everything to finish running
+        torch.cuda.synchronize()
+
+        print(f'Func {foo.__name__} took {start.elapsed_time(end)} seconds')
+        return out
+    return func
