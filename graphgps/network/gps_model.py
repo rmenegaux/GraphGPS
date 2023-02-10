@@ -5,6 +5,7 @@ from torch_geometric.graphgym.models.gnn import GNNPreMP
 from torch_geometric.graphgym.models.layer import (new_layer_config,
                                                    BatchNorm1dNode)
 from torch_geometric.graphgym.register import register_network
+from torch_geometric.utils import to_dense_batch
 
 from graphgps.layer.gps_layer import GPSLayer
 
@@ -47,6 +48,9 @@ class FeatureEncoder(torch.nn.Module):
     def forward(self, batch):
         for module in self.children():
             batch = module(batch)
+        h_dense, mask = to_dense_batch(batch.x, batch.batch)
+        num_nodes = mask.size()[1]
+        batch.attn_mask = mask.view(-1, num_nodes, 1) * mask.view(-1, 1, num_nodes)
         return batch
 
 
@@ -95,5 +99,22 @@ class GPSModel(torch.nn.Module):
 
     def forward(self, batch):
         for module in self.children():
-            batch = module(batch)
+            with CudaTimer(type(module).__name__) as _:
+                batch = module(batch)
+        # import pdb; pdb.set_trace()
         return batch
+
+import time
+class CudaTimer(object):
+    def __init__(self, name):
+        self.name = name
+     
+    def __enter__(self):
+        # self.start = time.time()
+        return None
+ 
+    def __exit__(self, *args):
+        # torch.cuda.current_stream().synchronize()
+        # self.end = time.time()
+        # print('{:<30}: {:.2f}ms'.format(self.name, (self.end - self.start)*1000))
+        pass
