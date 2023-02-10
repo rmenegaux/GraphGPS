@@ -13,6 +13,8 @@ from graphgps.layer.gine_conv_layer import GINEConvESLapPE
 from graphgps.layer.bigbird_layer import SingleBigBirdLayer
 from graphgps.layer.graphit_layer import MultiHeadAttentionLayer
 
+import time
+
 
 class GPSLayer(nn.Module):
     """Local MPNN + full graph attention x-former layer.
@@ -173,39 +175,46 @@ class GPSLayer(nn.Module):
         # Multi-head attention.
         if self.self_attn is not None:
             h_dense, mask = to_dense_batch(h, batch.batch)
+            attn_mask = batch.attn_mask
             if self.global_model_type == 'Transformer':
                 h_attn = self._sa_block(h_dense, None, ~mask)[mask]
             elif self.global_model_type == 'Performer':
                 h_attn = self.self_attn(h_dense, mask=mask)[mask]
             elif self.global_model_type == 'BigBird':
-                h_attn = self.self_attn(h_dense, attention_mask=mask)
+                h_attn = self.self_attn(h_dense, attention_mask=batch.attn_mask)
             elif self.global_model_type == 'GraphiT':
-                edge_dense = getattr(batch, 'edge_dense', None)
-                edge_att = getattr(batch, 'edge_attention', None)
-                edge_values = getattr(batch, 'edge_values', None)
-                h_attn = self.self_attn(h_dense, e=edge_dense, e_att=edge_att, e_value=edge_values, mask=mask)[mask]
-                h_attn = self.linear_attn(h_attn)
+                with CudaTimer('GraphiT layer total'):
+                    edge_dense = getattr(batch, 'edge_dense', None)
+                    edge_att = getattr(batch, 'edge_attention', None)
+                    edge_values = getattr(batch, 'edge_values', None)
+                    h_attn = self.self_attn(
+                        h_dense, e=edge_dense, e_att=edge_att, e_value=edge_values, attn_mask=attn_mask
+                        )[mask]
+                    h_attn = self.linear_attn(h_attn)
             else:
                 raise RuntimeError(f"Unexpected {self.global_model_type}")
 
-            h_attn = self.dropout_attn(h_attn)
-            h_attn = h_in1 + h_attn  # Residual connection.
+            with CudaTimer('dropout+batchnorm'):
+                h_attn = self.dropout_attn(h_attn)
+                h_attn = h_in1 + h_attn  # Residual connection.
+                if self.layer_norm:
+                    h_attn = self.norm1_attn(h_attn, batch.batch)
+                if self.batch_norm:
+                    h_attn = self.norm1_attn(h_attn)
+                h_out_list.append(h_attn)
+
+        with CudaTimer('FF block'):
+            # Combine local and global outputs.
+            # h = torch.cat(h_out_list, dim=-1)
+            h = sum(h_out_list)
+
+            # Feed Forward block.
+            h = h + self._ff_block(h)
             if self.layer_norm:
-                h_attn = self.norm1_attn(h_attn, batch.batch)
+                h = self.norm2(h, batch.batch)
             if self.batch_norm:
-                h_attn = self.norm1_attn(h_attn)
-            h_out_list.append(h_attn)
-
-        # Combine local and global outputs.
-        # h = torch.cat(h_out_list, dim=-1)
-        h = sum(h_out_list)
-
-        # Feed Forward block.
-        h = h + self._ff_block(h)
-        if self.layer_norm:
-            h = self.norm2(h, batch.batch)
-        if self.batch_norm:
-            h = self.norm2(h)
+                h = self.norm2(h)
+        # print('-------------------------------')
 
         batch.x = h
         return batch
@@ -231,3 +240,17 @@ class GPSLayer(nn.Module):
             f'global_model_type={self.global_model_type}, ' \
             f'heads={self.num_heads}'
         return s
+
+class CudaTimer(object):
+    def __init__(self, name):
+        self.name = name
+     
+    def __enter__(self):
+        # self.start = time.time()
+        return None
+ 
+    def __exit__(self, *args):
+        # torch.cuda.current_stream().synchronize()
+        # self.end = time.time()
+        # print('{:<30}: {:.2f}ms'.format(self.name, (self.end - self.start)*1000))
+        pass
