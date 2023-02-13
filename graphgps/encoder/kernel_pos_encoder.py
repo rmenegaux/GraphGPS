@@ -45,8 +45,9 @@ class KernelPENodeEncoder(torch.nn.Module):
             raise ValueError(f"PE dim size {dim_pe} is too large for "
                              f"desired embedding size of {dim_emb}.")
 
+        dim_pe = dim_emb
         if expand_x:
-            self.linear_x = nn.Linear(dim_in, dim_emb - dim_pe)
+            self.linear_x = nn.Linear(dim_in, dim_emb)
         self.expand_x = expand_x
 
         if norm_type == 'batchnorm':
@@ -94,7 +95,9 @@ class KernelPENodeEncoder(torch.nn.Module):
         else:
             h = batch.x
         # Concatenate final PEs to input embedding
-        batch.x = torch.cat((h, pos_enc), 1)
+        # batch.x = torch.cat((h, pos_enc), 1)
+        # Add final PEs to input embedding
+        batch.x = h + pos_enc
         # Keep PE also separate in a variable (e.g. for skip connections to input)
         if self.pass_as_var:
             setattr(batch, f'pe_{self.kernel_type}', pos_enc)
