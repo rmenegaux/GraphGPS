@@ -1,4 +1,5 @@
 import logging
+import time
 
 import torch
 from torch_geometric.utils import remove_self_loops
@@ -143,3 +144,17 @@ def format_dataset_name(cfg):
             dataset_name += cfg.dataset.name
     return dataset_name
 
+
+class CudaTimer(object):
+    def __init__(self, name):
+        self.name = name
+     
+    def __enter__(self):
+        self.start = time.time()
+        return None
+ 
+    def __exit__(self, *args):
+        torch.cuda.current_stream().synchronize()
+        self.end = time.time()
+        print('{:<30}: {:.2f}ms'.format(self.name, (self.end - self.start)*1000))
+        # pass
