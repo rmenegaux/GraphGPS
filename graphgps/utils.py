@@ -145,6 +145,8 @@ def format_dataset_name(cfg):
 
 def timer(foo):
     def func(*args, **kwargs):
+        torch.cuda.synchronize()
+        
         start = torch.cuda.Event(enable_timing=True)
         end = torch.cuda.Event(enable_timing=True)
 
@@ -155,6 +157,6 @@ def timer(foo):
         # Waits for everything to finish running
         torch.cuda.synchronize()
 
-        print(f'Func {foo.__name__} took {start.elapsed_time(end)} seconds')
+        print(f'Func {foo.__name__} took {start.elapsed_time(end)*.001:.2e} seconds')
         return out
     return func

@@ -1,8 +1,9 @@
 import time
+from pyparsing import rest_of_line
 import torch
 import torch.nn as nn
 
-from utils import timer
+from graphgps.utils import timer
 
 """
     GraphiT-GT
@@ -84,7 +85,8 @@ class GraphiT_Layer(nn.Module):
 
     def forward(self, h, edge_features=None, attn_mask=None):
 
-        mat_comp = time.time()
+        # @timer
+        # def mat_comp():
         Q = self.Q(h)  # [n_batch, num_nodes, out_dim * num_heads]
         K = self.K(h)  # [n_batch, num_nodes, out_dim * num_heads]
         V = self.V(h)  # [n_batch, num_nodes, out_dim * num_heads]
@@ -101,17 +103,24 @@ class GraphiT_Layer(nn.Module):
         scaling = float(self.out_dim) ** -0.5
         K = K * scaling
         # Q = Q * scaling # must be uncommented for DoubleScaling
-        # print(f'MODEL: 1) matrix computation took {time.time()-mat_comp:.3e} seconds')
+        #     return Q, K, V, n_batch, num_nodes
+        # Q, K, V, n_batch, num_nodes = mat_comp()
 
-        qke = time.time()
         if self.use_edge_features:
+            # @timer
+            # def QKE():
             E = self.E(edge_features)  # [n_batch, num_nodes, num_nodes, out_dim * num_heads]
             E = E.view(n_batch, num_nodes, num_nodes, self.num_heads, -1)  # [n_batch, num_nodes, num_nodes, num_heads, out_dim or 1]
             if self.QK_op == 'multiplication':
                 if self.KE_op == 'multiplication':  # Attention is Q . K . E
                     scores = torch.einsum('bihk,bjhk,bijhk->bijh', Q, K, E).unsqueeze(-1)
                 else: # means addition, # Attention is Q . K + E(multi_dim or scalar)
-                    scores = torch.einsum('bihk,bjhk->bijh', Q, K).unsqueeze(-1) + E  # eventually it ends with dimension of 1
+                    # scores = torch.einsum('bihk,bjhk->bijh', Q, K).unsqueeze(-1) + E  # eventually it ends with dimension of 1
+                    scores = torch.matmul(
+                        Q.permute(0, 2, 1, 3).contiguous(),
+                        K.permute(0, 2, 3, 1).contiguous()
+                    ).permute(0, 2, 3, 1).unsqueeze(-1)
+                    scores = scores + E
 
             elif self.QK_op is None:
                 scores = E
@@ -120,17 +129,22 @@ class GraphiT_Layer(nn.Module):
                 scores = Q.unsqueeze(2) + K.unsqueeze(1) + E  # (bi1hk + b1jhk + bijhk)
 
             # scores is in bijhk, with k being eventually 1
-        # print(f'MODEL: 2) QKE took {time.time()-qke:.3e} seconds')
+            #     return scores
+            # scores = QKE()
 
         # Mask to -np.inf such that exp is 0 and you can sum over it as a softmax
         #attn_mask = mask.view(-1, num_nodes, 1, 1, 1) * mask.view(-1, 1, num_nodes, 1, 1)  # [n_batch, num_nodes, num_nodes, 1, 1]
         #scores = torch.sparse.softmax((attn_mask * scores).to_sparse(), dim=2).to_dense()
-        sftmx = time.time()
-        scores = torch.nn.functional.softmax(torch.where(attn_mask == 0, -float('inf'), scores.double()), dim=2)
-        scores = torch.where(scores.isnan(), 0., scores)
-        # print(f'MODEL: 3) softmax took {time.time()-sftmx:.3e} seconds')
-        
-        drpt = time.time()
+        # @timer
+        # def sftmx(scores):
+        # scores = torch.nn.functional.softmax(torch.where(attn_mask == 0, -float('inf'), scores.double()), dim=2)
+        # scores = torch.where(scores.isnan(), 0., scores)
+        scores = torch.exp(scores.clamp(-5, 5)) * attn_mask
+        #     return scores / scores.sum(2, keepdim=True).clamp(min=1e-6)
+        # scores = sftmx(scores)
+
+        # @timer
+        # def drpt(attn_mask, scores):
         # Then dropout the scores.
         if self.dropout_lvl == 'feature':  # We drop some features for each head
             attn_mask = attn_mask.expand(n_batch, num_nodes, num_nodes, self.num_heads, self.out_dim) # to remove only some output connection features for some heads
@@ -140,21 +154,28 @@ class GraphiT_Layer(nn.Module):
             attn_mask = attn_mask[:,:,0].view(n_batch, num_nodes, 1, 1, 1)
         # Default is: We drop some connections for each node (all their heads)
         scores = scores * self.attn_dropout(attn_mask.float())  # Zeros-out elements along last dimension
-        # print(f'MODEL: 4) dropout took {time.time()-drpt:.3e} seconds')
+        #     return scores
+        # scores = drpt(attn_mask, scores)
 
-        scores_ve = time.time()
+        #V = V.double()
+        # @timer
+        # def VE():
         # Compute with Value matrix to finish attention, out size: [n_batch, num_nodes, num_heads, out_dim]
-        V = V.double()
         if self.VE_op is not None:
-            E_value = self.E_value(edge_features).double()
+            E_value = self.E_value(edge_features) #.double()
             E_value = E_value.view(n_batch, num_nodes, num_nodes, self.num_heads, -1)  # [n_batch, num_nodes, num_nodes, num_heads, out_dim or 1]
             if self.VE_op == 'addition':
                 # h = scores @ (V + E)
-                h = torch.einsum('bijhk,bjhk->bihk', scores, V)
+                # h = torch.einsum('bijhk,bjhk->bihk', scores, V)
+                h = torch.matmul(
+                        scores.permute(0, 3, 4, 1, 2).contiguous(),
+                        V.permute(0, 2, 3, 1).unsqueeze(-1).contiguous()
+                    ).squeeze(-1).permute(0, 3, 1, 2)
                 if self.edge_out_dim==1:
                     h += torch.einsum('bijhl,bijhk->bihk', scores, E_value)
                 else:
-                    h += torch.einsum('bijhk,bijhk->bihk', scores, E_value)
+                    # h += torch.einsum('bijhk,bijhk->bihk', scores, E_value)
+                    h += (scores * E_value).sum(2)
 
             elif self.VE_op == 'multiplication':
                 # h = scores * V * E
@@ -174,14 +195,17 @@ class GraphiT_Layer(nn.Module):
                 h = torch.einsum('bijhl,bjhk->bihk', scores, V)
             else:
                 h = torch.einsum('bijhk,bjhk->bihk', scores, V)
-        # print(f'MODEL: 5) scores*VE took {time.time()-scores_ve:.3e} seconds')
+        #     return h
+        # h = VE()
         
         # Concatenate attention heads
-        rshp = time.time()
+        # @timer
+        # def rshp(h):
         try: # FIXME
             h = h.view(n_batch, num_nodes, -1).float()  # [n_batch, num_nodes, out_dim * num_heads]
         except:
             h = h.reshape(n_batch, num_nodes, -1).float()
-        # print(f'MODEL: 6) reshape took {time.time()-rshp:.3e} seconds')
+        #     return h
+        # h = rshp(h)
 
         return h

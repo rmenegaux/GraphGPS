@@ -97,7 +97,16 @@ class GPSModel(torch.nn.Module):
 
     def forward(self, batch):
         for module in self.children():
-            mdl_fwd = time.time()
+            # torch.cuda.synchronize()
+            # start = torch.cuda.Event(enable_timing=True)
+            # end = torch.cuda.Event(enable_timing=True)
+
+            # start.record()
             batch = module(batch)
-            print(f'{module.__class__} forward took {time.time()-mdl_fwd:.3e} seconds')
+            # end.record()
+
+            # # Waits for everything to finish running
+            # torch.cuda.synchronize()
+
+            # print(f'Module {module.__class__} took {start.elapsed_time(end)*.001:.2e} seconds')
         return batch
