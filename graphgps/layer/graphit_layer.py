@@ -98,7 +98,7 @@ class GraphiT_Layer(nn.Module):
         # Normalize by sqrt(head dimension)
         scaling = float(self.out_dim) ** -0.5
         K = K * scaling
-        #Q = Q * scaling
+        #Q = Q * scaling # must be uncommented for DoubleScaling
 
         if self.use_edge_features:
             E = self.E(edge_features)  # [n_batch, num_nodes, num_nodes, out_dim * num_heads]

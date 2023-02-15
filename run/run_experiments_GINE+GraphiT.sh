@@ -29,7 +29,7 @@ function run_repeats {
     #    echo $script
     #    eval $script
     #done
-    script="sbatch -J ${cfg_suffix}-${dataset} -C v100-32g --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1  ${common_params}"
+    script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1  ${common_params}"
     echo $script
     eval $script
 }
@@ -50,11 +50,11 @@ done
 
 # Comment-out runs that you don't want to submit.
 main_dir="/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS"
-cfg_dir="${main_dir}/configs/GPS"
+cfg_dir="${main_dir}/configs/ZINC"
 
 DATASET="zinc"
-cfg_suffix="GraphiT_EJ_tests" #"GPS+RWSE+Rings-GraphiT_EJ_tests" # "GraphiT_EJ_tests"
-name="'QK+E_mono*V_DptConn_4seeds'"
+cfg_suffix="GINE+GraphiT_EJ_tests" #"GPS+RWSE+Rings-GraphiT_EJ_tests" # "GraphiT_EJ_tests"
+name="'GINE+GraphiT_DptConn_4seeds'"
 #addition="'addition'"
 #multiplication="'multiplication'"
 #QK_op="'QK_op'"

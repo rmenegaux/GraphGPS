@@ -5,7 +5,7 @@ wandb:
   use: True
   project: pcqm4m-subset
   entity: emmanuel-jehanno
-  name: (QK+E_multi)*(V+E_multi)_DptConn_rings
+  name: (QK+E_multi)*V_DptConn
   dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/
 dataset:
   dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets
@@ -20,9 +20,6 @@ dataset:
   edge_encoder: True
   edge_encoder_name: Bond+RWSE
   edge_encoder_bn: False
-  rings: True
-  rings_max_length: 18
-  rings_coalesce_edges: True
 posenc_RWSE:
   enable: True
   precompute: True
@@ -54,7 +51,7 @@ gt:
     - KE_op: addition
     - edge_out_dim: null
     - dropout_lvl: connections
-    - VE_op: addition
+    - VE_op: null
 gnn:
   head: san_graph
   layers_pre_mp: 0

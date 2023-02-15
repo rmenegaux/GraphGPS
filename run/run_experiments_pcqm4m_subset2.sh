@@ -24,14 +24,14 @@ function run_repeats {
     echo "  output dir: ${out_dir}"
 
     # Run each repeat as a separate job
-    #for SEED in {0..3}; do
-    #    script="sbatch -J ${cfg_suffix}-${dataset} -C v100-32g --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 seed ${SEED} ${common_params}"
-    #    echo $script
-    #    eval $script
-    #done
-    script="sbatch -J ${cfg_suffix}-${dataset} -C v100-32g --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1  ${common_params}"
-    echo $script
-    eval $script
+    for SEED in {0..3}; do
+        script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 seed ${SEED} ${common_params}"
+        echo $script
+        eval $script
+    done
+    #script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1  ${common_params}"
+    #echo $script
+    #eval $script
 }
 
 
@@ -50,11 +50,11 @@ done
 
 # Comment-out runs that you don't want to submit.
 main_dir="/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS"
-cfg_dir="${main_dir}/configs/GPS"
+cfg_dir="${main_dir}/configs/LRGB"
 
-DATASET="zinc"
-cfg_suffix="GraphiT_EJ_tests" #"GPS+RWSE+Rings-GraphiT_EJ_tests" # "GraphiT_EJ_tests"
-name="'QK+E_mono*V_DptConn_4seeds'"
+DATASET="pcqm4m_subset"
+cfg_suffix="GraphiT+RWSEonthefly2" #"GPS+RWSE+Rings-GraphiT_EJ_tests" # "GraphiT_EJ_tests"
+name="'QK+E_mono*V+E_multi_DptConn_4seeds'"
 #addition="'addition'"
 #multiplication="'multiplication'"
 #QK_op="'QK_op'"

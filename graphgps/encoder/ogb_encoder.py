@@ -1,4 +1,4 @@
-mport torch
+import torch
 from ogb.utils.features import get_atom_feature_dims, get_bond_feature_dims 
 
 from torch_geometric.graphgym.config import cfg
