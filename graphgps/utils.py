@@ -142,4 +142,3 @@ def format_dataset_name(cfg):
         else:
             dataset_name += cfg.dataset.name
     return dataset_name
-

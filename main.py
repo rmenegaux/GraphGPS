@@ -168,8 +168,9 @@ if __name__ == '__main__':
                                      new_optimizer_config(cfg))
         scheduler = create_scheduler(optimizer, new_scheduler_config(cfg))
         # Print model info
-        logging.info(model)
-        logging.info(cfg)
+        # TOFIX: comment or uncomment thats
+        # logging.info(model)
+        # logging.info(cfg)
         cfg.params = params_count(model)
         logging.info('Num parameters: %s', cfg.params)
         # Start training

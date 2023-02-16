@@ -1,3 +1,4 @@
+import time
 import torch
 import torch_geometric.graphgym.register as register
 from torch_geometric.graphgym.config import cfg
@@ -5,6 +6,7 @@ from torch_geometric.graphgym.models.gnn import GNNPreMP
 from torch_geometric.graphgym.models.layer import (new_layer_config,
                                                    BatchNorm1dNode)
 from torch_geometric.graphgym.register import register_network
+from torch_geometric.utils import to_dense_batch
 
 from graphgps.layer.gps_layer import GPSLayer
 
@@ -47,6 +49,9 @@ class FeatureEncoder(torch.nn.Module):
     def forward(self, batch):
         for module in self.children():
             batch = module(batch)
+        _, mask = to_dense_batch(batch.x, batch.batch)
+        num_nodes = mask.size()[1]
+        batch.attn_mask = mask.view(-1, num_nodes, 1) * mask.view(-1, 1, num_nodes)
         return batch
 
 
@@ -88,6 +93,7 @@ class GPSModel(torch.nn.Module):
                 bigbird_cfg=cfg.gt.bigbird,
                 layer_args=cfg.gt.layer_args,
                 mask_type=cfg.gt.mask_type,
+                graphiT_share=cfg.dataset.edge_encoder_shared
             ))
         self.layers = torch.nn.Sequential(*layers)
 

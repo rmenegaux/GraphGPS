@@ -68,6 +68,17 @@ args="name_tag ${name} wandb.mode offline"
 
 run_repeats ${DATASET} ${cfg_suffix} "${args}"
 
+DATASET="zinc"
+addition="addition"
+multiplication="multiplication"
+QK_op="QK_op"
+KE_op="KE_op"
+VE_op="VE_op"
+dropout_lvl="dropout_lvl"
+connections="connections"
+edge_out_dim="edge_out_dim"
+args="name_tag (Q+K+E_multi)*(V*E_multi)_DptConn_noHeads_4seeds wandb.mode 'offline' dataset.dir '/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets/ZINC' n_heads 1 wandb.name '(Q+K+E_multi)*(V*E_multi)_DptConn_noHeads' gt.layer_args '[{${QK_op}:${addition}}, {${KE_op}:${addition}}, {${VE_op}:${multiplication}}, {${dropout_lvl}:${connections}}, {${edge_out_dim}:null}]'"
+run_repeats ${DATASET} GraphiT_EJ_tests "${args}"
 
 # DATASET="mnist"
 # run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.10run"
