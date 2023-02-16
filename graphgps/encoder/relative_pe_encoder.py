@@ -141,10 +141,10 @@ class RWSEcomputer(torch.nn.Module):
         # This next line is just to get the node mask (perhaps overkill)
         _, mask = to_dense_batch(batch.edge_index.new_zeros(batch.num_nodes), batch=batch.batch)
         rw_landing, rw_landing_all = get_rw_landing_probs(ksteps=self.ksteps,
-                                        dense_adj=dense_adj)
-        batch.pestat_RWSE2 = rw_landing[mask]
+                                        dense_adj=dense_adj.double())
+        batch.pestat_RWSE = rw_landing[mask].float()
         if cfg.posenc_RWSE.enable_edges:
-            batch.edge_RWSE2 = rw_landing_all
+            batch.edge_RWSE = rw_landing_all.float()
 
         return batch
 
