@@ -80,6 +80,28 @@ def clip_graphs_to_size(data, size_limit=5000):
             data.edge_attr = edge_attr
         return data
 
+def compute_shortest_paths(data, config):
+    import networkx as nx
+    from torch_geometric.utils import to_networkx
+
+    graph_nx = to_networkx(data)
+    # Compute the shortest path lengths between two nodes
+    lengths = dict(nx.all_pairs_shortest_path_length(graph_nx, cutoff=config.spd_max_length))
+    # Populate the spd matrix with these lengths
+    # We choose to keep the torch geometric sparse format
+    total_reachable_pairs = sum([len(l) for l in lengths.values()])
+    data.spd_index = data.edge_index.new_zeros((2, total_reachable_pairs))
+    data.spd_lengths = data.edge_index.new_zeros(total_reachable_pairs)
+    i = 0
+    for source, targets in lengths.items():
+        for target, length in targets.items():
+            data.spd_index[0][i], data.spd_index[1][i] = source, target
+            data.spd_lengths[i] = length
+            i += 1
+
+    return data
+    
+
 def add_rings(data, config):
     # Find all pairs of nodes that are part of the same ring
     rings = get_rings(data.edge_index, max_k=config.rings_max_length)
@@ -145,22 +167,3 @@ def get_rings(edge_index, max_k=7):
 
     rings = list(rings)
     return rings
-
-# def get_SPD(edge_index):
-#     import graph_tool as gt
-#     import graph_tool.topology as top
-#     import networkx as nx
-
-#     if isinstance(edge_index, torch.Tensor):
-#         edge_index = edge_index.numpy()
-
-#     edge_list = edge_index.T
-#     graph_gt = gt.Graph(directed=False)
-#     graph_gt.add_edge_list(edge_list)
-#     gt.stats.remove_self_loops(graph_gt)
-#     gt.stats.remove_parallel_edges(graph_gt)
-#     # Ok so now we have the graph entity to work on with networkx
-#     import pdb;pdb.set_trace()
-#     nodes = set(edge_index[:,0]) # all nodes
-#     SPD = nx.all_shortest_paths_lengths(graph_gt, nodes, nodes)
-#     return SPD

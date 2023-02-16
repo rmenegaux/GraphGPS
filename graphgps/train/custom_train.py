@@ -10,61 +10,39 @@ from torch_geometric.graphgym.register import register_train
 from torch_geometric.graphgym.utils.epoch import is_eval_epoch, is_ckpt_epoch
 
 from graphgps.loss.subtoken_prediction_loss import subtoken_cross_entropy
-from graphgps.utils import cfg_to_dict, flatten_dict, make_wandb_name, make_wandb_dir, timer
+from graphgps.utils import cfg_to_dict, flatten_dict, make_wandb_name, make_wandb_dir
 
 
 def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation):
     model.train()
     optimizer.zero_grad()
-    @timer
-    def batch_load():
-        for i in range(10):
-            _ = next(iter(loader))
-    batch_load()
     for itr, batch in enumerate(loader):
         time_start = time.time()
         batch.split = 'train'
         batch.to(torch.device(cfg.device))
-        @timer
-        def forward():
-            pred, true = model(batch)
-            return pred, true
-        pred, true = forward()
-        @timer
-        def loss_cpt():
-            if cfg.dataset.name == 'ogbg-code2':
-                loss, pred_score = subtoken_cross_entropy(pred, true)
-                _true = true
-                _pred = pred_score
-            else:
-                loss, pred_score = compute_loss(pred, true)
-                _true = true.detach().to('cpu', non_blocking=True)
-                _pred = pred_score.detach().to('cpu', non_blocking=True)
-            return loss, pred_score, _true, _pred
-        loss, pred_score, _true, _pred = loss_cpt()
-        @timer
-        def backward(loss):
-            loss.backward()
-        backward(loss)
+        pred, true = model(batch)
+        if cfg.dataset.name == 'ogbg-code2':
+            loss, pred_score = subtoken_cross_entropy(pred, true)
+            _true = true
+            _pred = pred_score
+        else:
+            loss, pred_score = compute_loss(pred, true)
+            _true = true.detach().to('cpu', non_blocking=True)
+            _pred = pred_score.detach().to('cpu', non_blocking=True)
+        loss.backward()
         # Parameters update after accumulating gradients for given num. batches.
         if ((itr + 1) % batch_accumulation == 0) or (itr + 1 == len(loader)):
             if cfg.optim.clip_grad_norm:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            @timer
-            def opt_step(optimizer):
-                optimizer.step()
-            opt_step(optimizer)
+            optimizer.step()
             optimizer.zero_grad()
-        @timer
-        def log(logger):
-            logger.update_stats(true=_true,
-                                pred=_pred,
-                                loss=loss.detach().cpu().item(),
-                                lr=scheduler.get_last_lr()[0],
-                                time_used=time.time() - time_start,
-                                params=cfg.params,
-                                dataset_name=cfg.dataset.name)
-        log(logger)
+        logger.update_stats(true=_true,
+                            pred=_pred,
+                            loss=loss.detach().cpu().item(),
+                            lr=scheduler.get_last_lr()[0],
+                            time_used=time.time() - time_start,
+                            params=cfg.params,
+                            dataset_name=cfg.dataset.name)
     time_start = time.time()
 
 
@@ -75,13 +53,11 @@ def eval_epoch(logger, loader, model, split='val'):
     for batch in loader:
         batch.split = split
         batch.to(torch.device(cfg.device))
-        mdl_start = time.time()
         if cfg.gnn.head == 'inductive_edge':
             pred, true, extra_stats = model(batch)
         else:
             pred, true = model(batch)
             extra_stats = {}
-        #print(f'Model inference took {time.time()-mdl_start:.3e} seconds')
         if cfg.dataset.name == 'ogbg-code2':
             loss, pred_score = subtoken_cross_entropy(pred, true)
             _true = true

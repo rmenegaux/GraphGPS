@@ -1,4 +1,3 @@
-import time
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -33,9 +32,6 @@ class SANGraphHead(nn.Module):
         return batch.graph_feature, batch.y
 
     def forward(self, batch):
-        start = time.time()
-        batch.x = batch.x[batch.mask]
-        #print(f'Final masking took {time.time()-start:.3e} seconds')
         graph_emb = self.pooling_fun(batch.x, batch.batch)
         for l in range(self.L):
             graph_emb = self.FC_layers[l](graph_emb)

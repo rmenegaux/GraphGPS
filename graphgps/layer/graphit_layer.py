@@ -1,9 +1,6 @@
-import time
 from pyparsing import rest_of_line
 import torch
 import torch.nn as nn
-
-from graphgps.utils import timer
 
 """
     GraphiT-GT
@@ -58,7 +55,7 @@ class GraphiT_Layer(nn.Module):
     def __init__(self, in_dim, in_dim_edges, out_dim, num_heads,
                  use_bias=False, use_edge_features=True,
                  attn_dropout=0.0, QK_op='multiplication', KE_op='addition',
-                 VE_op=None, edge_out_dim=None,
+                 VE_op=None, edge_out_dim=None, share_edge_features=True,
                  dropout_lvl='connections'):
         super().__init__()
         
@@ -69,24 +66,24 @@ class GraphiT_Layer(nn.Module):
         self.KE_op = KE_op
         self.VE_op = VE_op
         self.dropout_lvl = dropout_lvl
+        self.share_edge_features = share_edge_features
         
         self.Q = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
         self.K = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
         if self.use_edge_features:
             # assert (self.QK_op in ['multiplication', 'addition']) and (self.KE_op in ['multiplication', 'addition'])
             self.edge_out_dim = 1 if (self.QK_op=='multiplication' and self.KE_op=='addition' and edge_out_dim==1) else out_dim
-            self.E = nn.Linear(in_dim_edges, self.edge_out_dim * num_heads, bias=use_bias)
-            # E_value will always be multi
-            self.E_value = nn.Linear(in_dim_edges, out_dim * num_heads, bias=use_bias)
+            if not self.share_edge_features:
+                self.E_att = nn.Linear(in_dim_edges, self.edge_out_dim * num_heads, bias=use_bias)
+                # E_value will always be multi
+                self.E_value = nn.Linear(in_dim_edges, out_dim * num_heads, bias=use_bias)
 
         self.V = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
 
         self.attn_dropout = nn.Dropout(p=attn_dropout)
 
-    def forward(self, h, edge_features=None, attn_mask=None):
+    def forward(self, h, edge_features=None, e_att=None, e_value=None, attn_mask=None):
 
-        # @timer
-        # def mat_comp():
         Q = self.Q(h)  # [n_batch, num_nodes, out_dim * num_heads]
         K = self.K(h)  # [n_batch, num_nodes, out_dim * num_heads]
         V = self.V(h)  # [n_batch, num_nodes, out_dim * num_heads]
@@ -103,48 +100,42 @@ class GraphiT_Layer(nn.Module):
         scaling = float(self.out_dim) ** -0.5
         K = K * scaling
         # Q = Q * scaling # must be uncommented for DoubleScaling
-        #     return Q, K, V, n_batch, num_nodes
-        # Q, K, V, n_batch, num_nodes = mat_comp()
 
         if self.use_edge_features:
-            # @timer
-            # def QKE():
-            E = self.E(edge_features)  # [n_batch, num_nodes, num_nodes, out_dim * num_heads]
-            E = E.view(n_batch, num_nodes, num_nodes, self.num_heads, -1)  # [n_batch, num_nodes, num_nodes, num_heads, out_dim or 1]
+            E_att = e_att if self.share_edge_features else self.E_att(edge_features)  # [n_batch, num_nodes, num_nodes, out_dim * num_heads]
+            E_att = E_att.view(n_batch, num_nodes, num_nodes, self.num_heads, -1)  # [n_batch, num_nodes, num_nodes, num_heads, out_dim or 1]
             if self.QK_op == 'multiplication':
                 if self.KE_op == 'multiplication':  # Attention is Q . K . E
-                    scores = torch.einsum('bihk,bjhk,bijhk->bijh', Q, K, E).unsqueeze(-1)
+                    scores = torch.einsum('bihk,bjhk,bijhk->bijh', Q, K, E_att).unsqueeze(-1)
                 else: # means addition, # Attention is Q . K + E(multi_dim or scalar)
                     # scores = torch.einsum('bihk,bjhk->bijh', Q, K).unsqueeze(-1) + E  # eventually it ends with dimension of 1
                     scores = torch.matmul(
-                        Q.permute(0, 2, 1, 3).contiguous(),
-                        K.permute(0, 2, 3, 1).contiguous()
-                    ).permute(0, 2, 3, 1).unsqueeze(-1)
-                    scores = scores + E
+                        Q.permute(0, 2, 1, 3).contiguous(),  # bhik
+                        K.permute(0, 2, 3, 1).contiguous()   # bhkj
+                    ).permute(0, 2, 3, 1).unsqueeze(-1)      # bhij -> bijh
+                    scores = scores + E_att
 
             elif self.QK_op is None:
-                scores = E
+                scores = E_att
 
             else: # means addition, Attention is Q + K + E
-                scores = Q.unsqueeze(2) + K.unsqueeze(1) + E  # (bi1hk + b1jhk + bijhk)
+                scores = Q.unsqueeze(2) + K.unsqueeze(1) + E_att  # (bi1hk + b1jhk + bijhk)
 
             # scores is in bijhk, with k being eventually 1
-            #     return scores
-            # scores = QKE()
+        else:
+            scores = torch.einsum('bihk,bjhk->bijh', Q, K).unsqueeze(-1)
 
         # Mask to -np.inf such that exp is 0 and you can sum over it as a softmax
-        #attn_mask = mask.view(-1, num_nodes, 1, 1, 1) * mask.view(-1, 1, num_nodes, 1, 1)  # [n_batch, num_nodes, num_nodes, 1, 1]
-        #scores = torch.sparse.softmax((attn_mask * scores).to_sparse(), dim=2).to_dense()
-        # @timer
-        # def sftmx(scores):
+        # attn_mask = mask.view(-1, num_nodes, 1, 1, 1) * mask.view(-1, 1, num_nodes, 1, 1)  # [n_batch, num_nodes, num_nodes, 1, 1]
+        # scores = torch.sparse.softmax((attn_mask * scores).to_sparse(), dim=2).to_dense()
         # scores = torch.nn.functional.softmax(torch.where(attn_mask == 0, -float('inf'), scores.double()), dim=2)
         # scores = torch.where(scores.isnan(), 0., scores)
-        scores = torch.exp(scores.clamp(-5, 5)) * attn_mask
-        #     return scores / scores.sum(2, keepdim=True).clamp(min=1e-6)
-        # scores = sftmx(scores)
+        # scores = torch.exp(scores.clamp(-5, 5)) * attn_mask
+        scores = scores - 1e24 * (~attn_mask)
+        # The head dimension is not needed anymore, merge it with the feature dimension
+        # scores = scores.reshape(n_batch, num_nodes, num_nodes, -1)
+        scores = nn.functional.softmax(scores, dim=2)
 
-        # @timer
-        # def drpt(attn_mask, scores):
         # Then dropout the scores.
         if self.dropout_lvl == 'feature':  # We drop some features for each head
             attn_mask = attn_mask.expand(n_batch, num_nodes, num_nodes, self.num_heads, self.out_dim) # to remove only some output connection features for some heads
@@ -154,15 +145,11 @@ class GraphiT_Layer(nn.Module):
             attn_mask = attn_mask[:,:,0].view(n_batch, num_nodes, 1, 1, 1)
         # Default is: We drop some connections for each node (all their heads)
         scores = scores * self.attn_dropout(attn_mask.float())  # Zeros-out elements along last dimension
-        #     return scores
-        # scores = drpt(attn_mask, scores)
 
         #V = V.double()
-        # @timer
-        # def VE():
         # Compute with Value matrix to finish attention, out size: [n_batch, num_nodes, num_heads, out_dim]
         if self.VE_op is not None:
-            E_value = self.E_value(edge_features) #.double()
+            E_value = e_value if self.share_edge_features else self.E_value(edge_features) #.double()
             E_value = E_value.view(n_batch, num_nodes, num_nodes, self.num_heads, -1)  # [n_batch, num_nodes, num_nodes, num_heads, out_dim or 1]
             if self.VE_op == 'addition':
                 # h = scores @ (V + E)
@@ -195,17 +182,11 @@ class GraphiT_Layer(nn.Module):
                 h = torch.einsum('bijhl,bjhk->bihk', scores, V)
             else:
                 h = torch.einsum('bijhk,bjhk->bihk', scores, V)
-        #     return h
-        # h = VE()
         
         # Concatenate attention heads
-        # @timer
-        # def rshp(h):
         try: # FIXME
             h = h.view(n_batch, num_nodes, -1).float()  # [n_batch, num_nodes, out_dim * num_heads]
         except:
             h = h.reshape(n_batch, num_nodes, -1).float()
-        #     return h
-        # h = rshp(h)
-
+        
         return h
