@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH --job-name graph_gps
 #SBATCH -A tbr@v100
-#SBATCH -C v100-32g
+#SBATCH -C v100-16g
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
@@ -31,6 +31,6 @@ echo "$args"
 # config="configs/GPS/zinc-GraphiT+Rings-RWSEfly.yaml"
 config_name="ogbg-molpcba-GraphiT+RWSE"
 config_name="pcqm4m_subset-GraphiTmedium+RWSE"
-# config_name="pcqm4m-GraphiT+RWSE"
-config="configs/GPS/${config_name}.yaml"
-python main.py --cfg $config  wandb.use True wandb.mode "offline" wandb.name "${config_name}.trim64.r0"
+config_name="pcqm4m_subset-GraphiT+RWSE-Rings"
+config="configs/GraphiT/${config_name}.yaml"
+python main.py --cfg $config  wandb.use True wandb.mode "offline" wandb.name "${config_name}6.speedrun.r0"
