@@ -2,13 +2,12 @@ out_dir: results
 metric_best: mrr
 num_workers: 4
 wandb:
-  use: True
+  use: False
   project: pcqm4m-contact
   entity: emmanuel-jehanno
   name: (QK+E)*(V+E)_multi_DptConn
-  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/PCQM4Mv2Contact
 dataset:
-  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets
+  dir: /scratch2/clear/ejehanno/datasets/
   format: OGB
   name: PCQM4Mv2Contact-shuffle
   task: graph  # PCQM4Mv2Contact is edge-level task, but because it is inductive, set to 'graph'
@@ -30,7 +29,7 @@ posenc_RWSE:
   raw_norm_type: BatchNorm
 train:
   mode: custom
-  batch_size: 64
+  batch_size: 256
   eval_period: 1
   ckpt_period: 100
 model:
@@ -39,7 +38,7 @@ model:
   edge_decoding: dot
 gt:
   layer_type: None+GraphiT
-  layers: 10
+  layers: 4
   n_heads: 4
   dim_hidden: 120  # `gt.dim_hidden` must match `gnn.dim_inner`
   dropout: 0.0

@@ -22,6 +22,9 @@ def set_cfg_posenc(cfg):
 
         # Use extended positional encodings
         pecfg.enable = False
+        
+        # Precompute positional encodings (compute them on the fly if set to False)
+        pecfg.precompute = True
 
         # Precompute positional encodings (compute them on the fly if set to False)
         pecfg.precompute = True
@@ -88,3 +91,9 @@ def set_cfg_posenc(cfg):
 
     # Override default, electrostatic kernel has fixed set of 10 measures.
     cfg.posenc_ElstaticSE.kernel.times_func = 'range(10)'
+    
+    # Whether to compute the full RWSE(i,j) for all pairs
+    cfg.posenc_RWSE.enable_edges = True
+    # Possible feature to add: separate number of steps (or kernel.times) for edges
+    # Not implemented yet
+    # cfg.posenc_RWSE.edge_psteps = 16

@@ -221,7 +221,7 @@ def load_dataset_master(format, name, dataset_dir):
         timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
                   + f'{elapsed:.2f}'[-3:]
         logging.info(f"Done! Took {timestr}")
-
+        
     # Add ring information for molecular datasets
     if not hasattr(cfg.dataset, 'rings'):
         cfg.dataset.rings = False
@@ -361,7 +361,7 @@ def preformat_OGB_Graph(dataset_dir, name):
         # Subset graphs to a maximum size (number of nodes) limit.
         # This affects only very few graphs, which crash GPU memory in GraphiT
         pre_transform_in_memory(dataset, partial(clip_graphs_to_size,
-                                                 size_limit=63))
+                                                 size_limit=128))
     elif name == 'ogbg-code2':
         from graphgps.loader.ogbg_code2_utils import idx2vocab, \
             get_vocab_mapping, augment_edge, encode_y_to_arr
@@ -437,8 +437,10 @@ def preformat_OGB_PCQM4Mv2(dataset_dir, name):
     elif name == 'subset':
         # Further subset the training set for faster debugging.
         subset_ratio = 0.1
+        #subset_ratio = 0.001
         subtrain_idx = train_idx[:int(subset_ratio * len(train_idx))]
         subvalid_idx = valid_idx[:50000]
+        #subvalid_idx = valid_idx[:500]
         subtest_idx = split_idx['valid']  # The original 'valid' as testing set.
         dataset = dataset[torch.cat([subtrain_idx, subvalid_idx, subtest_idx])]
         n1, n2, n3 = len(subtrain_idx), len(subvalid_idx), len(subtest_idx)
@@ -449,7 +451,7 @@ def preformat_OGB_PCQM4Mv2(dataset_dir, name):
         raise ValueError(f'Unexpected OGB PCQM4Mv2 subset choice: {name}')
     dataset.split_idxs = split_idxs
     pre_transform_in_memory(dataset, partial(clip_graphs_to_size,
-                                             size_limit=63))
+                                             size_limit=63)) 
     return dataset
 
 

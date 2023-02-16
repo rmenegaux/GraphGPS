@@ -2,13 +2,12 @@ out_dir: results
 metric_best: mae
 metric_agg: argmin
 wandb:
-  use: True
+  use: False
   project: peptides-struct
   entity: emmanuel-jehanno
   name: (QK+E)*(V+E)_multi_DptConn
-  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/peptides-structural
 dataset:
-  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets
+  dir: /scratch2/clear/ejehanno/datasets/
   format: OGB
   name: peptides-structural
   task: graph
@@ -29,7 +28,7 @@ posenc_RWSE:
   raw_norm_type: BatchNorm
 train:
   mode: custom
-  batch_size: 32
+  batch_size: 128
   eval_period: 1
   ckpt_period: 100
 model:

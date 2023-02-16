@@ -1,13 +1,12 @@
 out_dir: results
 metric_best: f1
 wandb:
-  use: True
+  use: False
   project: Pascal
   entity: emmanuel-jehanno
   name: (QK+E)*(V+E)_multi_DptConn
-  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/vocsuperpixels
 dataset:
-  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets
+  dir: /scratch2/clear/ejehanno/datasets
   format: PyG-VOCSuperpixels
   name: edge_wt_only_coord  # Alternative: edge_wt_region_boundary
   slic_compactness: 10

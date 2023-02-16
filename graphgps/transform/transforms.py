@@ -100,6 +100,7 @@ def compute_shortest_paths(data, config):
             i += 1
 
     return data
+    
 
 def add_rings(data, config):
     # Find all pairs of nodes that are part of the same ring
