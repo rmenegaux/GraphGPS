@@ -99,7 +99,7 @@ class GPSLayer(nn.Module):
                 dim_h, dim_h, dim_h//num_heads, num_heads,
                 attn_dropout=self.attn_dropout,
                 share_edge_features=graphiT_share)
-            self.linear_attn = nn.Linear(dim_h, dim_h)
+            self.linear_attn = nn.Linear(dim_h, dim_h, bias=False)
         else:
             raise ValueError(f"Unsupported global x-former model: "
                              f"{global_model_type}")
@@ -124,8 +124,8 @@ class GPSLayer(nn.Module):
 
         # Feed Forward block.
         self.activation = F.relu
-        self.ff_linear1 = nn.Linear(dim_h, dim_h * 2)
-        self.ff_linear2 = nn.Linear(dim_h * 2, dim_h)
+        self.ff_linear1 = nn.Linear(dim_h, dim_h * 2, bias=False)
+        self.ff_linear2 = nn.Linear(dim_h * 2, dim_h, bias=False)
         if self.layer_norm:
             # self.norm2 = pygnn.norm.LayerNorm(dim_h)
             self.norm2 = pygnn.norm.GraphNorm(dim_h)
@@ -195,6 +195,7 @@ class GPSLayer(nn.Module):
                 h_attn = self.norm1_attn(h_attn, batch.batch)
             if self.batch_norm:
                 h_attn = self.norm1_attn(h_attn.transpose(1,2)).transpose(1,2)
+                h_attn = h_attn * mask.unsqueeze(-1)
             h_out_list.append(h_attn)
 
         # Combine local and global outputs.
@@ -207,6 +208,7 @@ class GPSLayer(nn.Module):
             h = self.norm2(h, batch.batch)
         if self.batch_norm:
             h_attn = self.norm2(h_attn.transpose(1,2)).transpose(1,2)
+            h_attn = h_attn * mask.unsqueeze(-1)
 
         batch.x = h
         return batch

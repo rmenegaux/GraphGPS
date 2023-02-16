@@ -49,6 +49,7 @@ class FeatureEncoder(torch.nn.Module):
         for module in self.children():
             batch = module(batch)
         batch.x, batch.mask = to_dense_batch(batch.x, batch.batch)
+        batch.x = batch.x * batch.mask.unsqueeze(-1)
         return batch
 
 
