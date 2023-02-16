@@ -5,7 +5,7 @@ wandb:
   use: True
   project: ZINC_seeds
   entity: emmanuel-jehanno
-  name: '(QK+E_mono)*V_DptConn_4seeds'
+  name: '(QK+E_multi)*(V+E_multi)_DptConn_AdjMask_4seeds'
   dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/
 dataset:
   dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets/
@@ -51,13 +51,13 @@ gt:
   attn_dropout: 0.5
   layer_norm: False
   batch_norm: True
-  #mask_type: adj
+  mask_type: adj
   layer_args:
     - QK_op: multiplication
     - KE_op: addition
-    - edge_out_dim: 1
+    - edge_out_dim: null
     - dropout_lvl: connections
-    - VE_op: null
+    - VE_op: addition
 gnn:
   head: san_graph
   layers_pre_mp: 0

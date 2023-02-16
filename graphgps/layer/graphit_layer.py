@@ -105,6 +105,7 @@ class GraphiT_Layer(nn.Module):
             E_att = e_att if self.share_edge_features else self.E_att(edge_features)  # [n_batch, num_nodes, num_nodes, out_dim * num_heads]
             E_att = E_att.view(n_batch, num_nodes, num_nodes, self.num_heads, -1)  # [n_batch, num_nodes, num_nodes, num_heads, out_dim or 1]
             if self.QK_op == 'multiplication':
+                #K = K * scaling
                 if self.KE_op == 'multiplication':  # Attention is Q . K . E
                     scores = torch.einsum('bihk,bjhk,bijhk->bijh', Q, K, E_att).unsqueeze(-1)
                 else: # means addition, # Attention is Q . K + E(multi_dim or scalar)

@@ -107,6 +107,10 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
             wandb_name = make_wandb_name(cfg)
         else:
             wandb_name = cfg.wandb.name
+        if cfg.wandb.dir == '':
+            wandb_dir = make_wandb_dir(cfg)
+        else:
+            wandb_dir = cfg.wandb.dir
         run = wandb.init(entity=cfg.wandb.entity, project=cfg.wandb.project,
                 name=wandb_name, mode=cfg.wandb.mode, dir=getattr(cfg.wandb, 'dir', make_wandb_dir(cfg)))
         run.config.update(cfg_to_dict(cfg))

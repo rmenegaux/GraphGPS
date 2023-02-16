@@ -5,7 +5,7 @@ wandb:
   use: True
   project: ZINC_seeds
   entity: emmanuel-jehanno
-  name: '(QK+E_mono)*V_DptConn_4seeds'
+  name: '(Q+K+E_multi)*(V*E_multi)_DptConn_noHeads_DoubleScaling_4seeds'
   dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/
 dataset:
   dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets/
@@ -45,7 +45,7 @@ model:
 gt:
   layer_type: None+GraphiT  # CustomGatedGCN+Performer
   layers: 10
-  n_heads: 4
+  n_heads: 1
   dim_hidden: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
   dropout: 0.0
   attn_dropout: 0.5
@@ -53,11 +53,11 @@ gt:
   batch_norm: True
   #mask_type: adj
   layer_args:
-    - QK_op: multiplication
+    - QK_op: addition
     - KE_op: addition
-    - edge_out_dim: 1
+    - edge_out_dim: null
     - dropout_lvl: connections
-    - VE_op: null
+    - VE_op: multiplication
 gnn:
   head: san_graph
   layers_pre_mp: 0

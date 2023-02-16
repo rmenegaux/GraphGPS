@@ -24,3 +24,6 @@ def set_cfg_wandb(cfg):
 
     # Run mode, defaults to online
     cfg.wandb.mode = "online"
+
+    # Run dir, defaults to ""
+    cfg.wandb.dir = ""

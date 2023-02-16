@@ -26,6 +26,9 @@ def set_cfg_posenc(cfg):
         # Precompute positional encodings (compute them on the fly if set to False)
         pecfg.precompute = True
 
+        # Precompute positional encodings (compute them on the fly if set to False)
+        pecfg.precompute = True
+        
         # Neural-net model type within the PE encoder:
         # 'DeepSet', 'Transformer', 'Linear', 'none', ...
         pecfg.model = 'none'
