@@ -14,11 +14,15 @@ dataset:
   node_encoder_name: Atom+RWSE
   node_encoder_bn: False
   edge_encoder: True
+  edge_encoder_shared: True
   edge_encoder_name: Bond+RWSE
   edge_encoder_bn: False
+  rings: False
+  rings_max_length: 6
+  rings_coalesce_edges: False
 posenc_RWSE:
   enable: True
-  precompute: False
+  precompute: True
   kernel:
     times_func: range(1,17)
   model: Linear
@@ -54,7 +58,7 @@ optim:
   clip_grad_norm: True
   optimizer: adamW
   weight_decay: 0.0
-  base_lr: 0.0005
+  base_lr: 0.0002
   max_epoch: 100
   scheduler: cosine_with_warmup
-  num_warmup_epochs: 5
+  num_warmup_epochs: 10

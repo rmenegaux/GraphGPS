@@ -1,11 +1,11 @@
 #!/bin/bash -l
 #SBATCH --job-name graph_gps
 #SBATCH -A tbr@v100
-#SBATCH -C v100-16g
+#SBATCH --partition=gpu_p4
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=6
 #SBATCH --hint=nomultithread
 #SBATCH --time=20:00:00
 #SBATCH --output=/gpfswork/rech/tbr/ump88gx/logs/%j.out      # nom du fichier de sortie
@@ -30,6 +30,6 @@ args=$1
 echo "$args"
 # config="configs/GPS/zinc-GraphiT+Rings-RWSEfly.yaml"
 config_name="ogbg-molpcba-GraphiT+RWSE"
-config_name="pcqm4m_subset-GraphiTmedium+RWSE-Rings"
+config_name="pcqm4m_subset-GraphiTmedium+RWSE"
 config="configs/GraphiT/${config_name}.yaml"
-python main.py --cfg $config  wandb.use True wandb.mode "offline" wandb.name "${config_name}6.speedrun.r0"
+python main.py --cfg $config  wandb.use True wandb.mode "offline" wandb.name "${config_name}.speedrun.r0"
