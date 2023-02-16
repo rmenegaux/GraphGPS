@@ -56,7 +56,7 @@ class GraphiT_Layer(nn.Module):
                  use_bias=False, use_edge_features=True,
                  attn_dropout=0.0, QK_op='multiplication', KE_op='addition',
                  VE_op=None, edge_out_dim=None,
-                 dropout_lvl='connections'):
+                 dropout_lvl='connections', scaling='single'):
         super().__init__()
         
         self.out_dim = out_dim
@@ -66,6 +66,7 @@ class GraphiT_Layer(nn.Module):
         self.KE_op = KE_op
         self.VE_op = VE_op
         self.dropout_lvl = dropout_lvl
+        self.scaling = scaling
         
         self.Q = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
         self.K = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
@@ -97,8 +98,10 @@ class GraphiT_Layer(nn.Module):
 
         # Normalize by sqrt(head dimension)
         scaling = float(self.out_dim) ** -0.5
-        K = K * scaling
-        #Q = Q * scaling # must be uncommented for DoubleScaling
+        if self.scaling is not None:
+            K = K * scaling
+            if self.scaling=='double':
+                Q = Q * scaling
 
         if self.use_edge_features:
             E = self.E(edge_features)  # [n_batch, num_nodes, num_nodes, out_dim * num_heads]
