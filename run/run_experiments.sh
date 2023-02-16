@@ -24,13 +24,6 @@ function run_repeats {
     echo "  output dir: ${out_dir}"
 
     # Run each repeat as a separate job
-<<<<<<< HEAD
-    for SEED in {0..1}; do
-        script="sbatch -J ${cfg_suffix}-${dataset} run/wrapper.sb ${main} --repeat 1 seed ${SEED} ${common_params}"
-        echo $script
-        eval $script
-    done
-=======
     #for SEED in {0..3}; do
     #    script="sbatch -J ${cfg_suffix}-${dataset} -C v100-32g --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 seed ${SEED} ${common_params}"
     #    echo $script
@@ -39,7 +32,6 @@ function run_repeats {
     script="sbatch -J ${cfg_suffix}-${dataset} -C v100-32g --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1  ${common_params}"
     echo $script
     eval $script
->>>>>>> JeanZay_EJ
 }
 
 
@@ -60,9 +52,6 @@ done
 main_dir="/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS"
 cfg_dir="${main_dir}/configs/GPS"
 
-<<<<<<< HEAD
-DATASET="zinc"cfg_dir="configs/GPS"
-=======
 DATASET="zinc"
 cfg_suffix="GraphiT_EJ_tests" #"GPS+RWSE+Rings-GraphiT_EJ_tests" # "GraphiT_EJ_tests"
 name="'QK+E_mono*V_DptConn_4seeds'"
@@ -78,7 +67,6 @@ args="name_tag ${name} wandb.mode offline"
 #dataset.dir ${main_dir}/datasets/ZINC n_heads 1 wandb.name ${name} gt.layer_args '[{${QK_op}:${addition}}, {${KE_op}:${addition}}, {${VE_op}:${multiplication}}, {${dropout_lvl}:${connections}}, {${edge_out_dim}:null}]'"
 
 run_repeats ${DATASET} ${cfg_suffix} "${args}"
->>>>>>> JeanZay_EJ
 
 DATASET="zinc"
 addition="addition"
