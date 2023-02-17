@@ -49,13 +49,13 @@ gt:
   attn_dropout: 0.5
   layer_norm: False
   batch_norm: True
-  scaling: null
   layer_args:
     - QK_op: addition
     - KE_op: addition
     - edge_out_dim: null
     - dropout_lvl: connections
     - VE_op: addition
+    - scaling: null
 gnn:
   head: san_graph
   layers_pre_mp: 0
