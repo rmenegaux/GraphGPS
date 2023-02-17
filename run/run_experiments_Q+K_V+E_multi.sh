@@ -29,7 +29,7 @@ function run_repeats {
     #     echo $script
     #     eval $script
     # done
-    script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 train.auto_resume True ${common_params}"
+    script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 ${common_params}"
     echo $script
     eval $script
 }
