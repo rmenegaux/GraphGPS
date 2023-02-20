@@ -94,7 +94,8 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
                                           edge_index=data.edge_index,
                                           num_nodes=N)
         data.pestat_RWSE = rw_landing
-        data.edge_RWSE = rw_landing_all
+        if cfg.posenc_RWSE.enable_edges:
+            data.edge_RWSE = rw_landing_all
 
     # Heat Kernels.
     if 'HKdiagSE' in pe_types or 'HKfullPE' in pe_types:

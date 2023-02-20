@@ -4,7 +4,11 @@ num_workers: 4
 wandb:
   use: True
   project: pcqm4m-contact
+  entity: emmanuel-jehanno
+  name: GPS_benchmark
+  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/PCQM4Mv2Contact
 dataset:
+  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets
   format: OGB
   name: PCQM4Mv2Contact-shuffle
   task: graph  # PCQM4Mv2Contact is edge-level task, but because it is inductive, set to 'graph'

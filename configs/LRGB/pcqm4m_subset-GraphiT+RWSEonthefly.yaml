@@ -5,7 +5,8 @@ wandb:
   use: True
   project: pcqm4m-subset
   entity: emmanuel-jehanno
-  name: (QK+E)*(V+E)_multi_DptConn
+  name: (QK+E_multi)*(V+E_multi)_DptConn_rings
+  # dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/
 dataset:
   dir: /scratch2/clear/ejehanno/datasets/
   format: OGB
@@ -19,9 +20,12 @@ dataset:
   edge_encoder: True
   edge_encoder_name: Bond+RWSE
   edge_encoder_bn: False
+  rings: True
+  rings_max_length: 18
+  rings_coalesce_edges: True
 posenc_RWSE:
   enable: True
-  precompute: False
+  precompute: True
   kernel:
     times_func: range(1,17)
   model: Linear

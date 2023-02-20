@@ -1,16 +1,18 @@
 out_dir: results
-metric_best: auc
+metric_best: mae
+metric_agg: argmin
 wandb:
   use: True
-  project: molhiv
+  project: pcqm4m-subset
   entity: emmanuel-jehanno
-  name: (QK+E)*(V+E)_multi_DptConn
+  name: (QK+E_multi)*(V+E_multi)_DptConn_AdjMask_noCoalesce
+  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/
 dataset:
   dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets
   format: OGB
-  name: ogbg-molhiv
-  task: graph
-  task_type: classification
+  name: PCQM4Mv2-subset
+  task: graph  # PCQM4Mv2Contact is edge-level task, but because it is inductive, set to 'graph'
+  task_type: regression
   transductive: False
   node_encoder: True
   node_encoder_name: Atom+RWSE
@@ -19,34 +21,35 @@ dataset:
   edge_encoder_name: Bond+RWSE
   edge_encoder_bn: False
   rings: True
-  rings_max_length: 6
+  rings_max_length: 18
   rings_coalesce_edges: False
 posenc_RWSE:
   enable: True
+  precompute: True
   kernel:
     times_func: range(1,17)
   model: Linear
-  dim_pe: 16
+  dim_pe: 20
   raw_norm_type: BatchNorm
 train:
   mode: custom
-  batch_size: 32
+  batch_size: 256
   eval_period: 1
   ckpt_period: 100
 model:
   type: GPSModel
-  loss_fun: cross_entropy
-  edge_decoding: dot
+  loss_fun: l1
   graph_pooling: mean
 gt:
   layer_type: None+GraphiT
-  layers: 4 # TODO: same for zinc so need to adapt? It's kept the same in GPS
+  layers: 5
   n_heads: 4
-  dim_hidden: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
-  dropout: 0.05
+  dim_hidden: 304  # `gt.dim_hidden` must match `gnn.dim_inner`
+  dropout: 0.0
   attn_dropout: 0.5
   layer_norm: False
   batch_norm: True
+  mask_type: adj
   layer_args:
     - QK_op: multiplication
     - KE_op: addition
@@ -56,28 +59,16 @@ gt:
 gnn:
   head: san_graph
   layers_pre_mp: 0
-  layers_post_mp: 3  # Not used when `gnn.head: san_graph`
-  dim_inner: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
+  layers_post_mp: 3
+  dim_inner: 304  # `gt.dim_hidden` must match `gnn.dim_inner`
   batchnorm: True
   act: relu
   dropout: 0.0
-  agg: mean
-  normalize_adj: False
 optim:
   clip_grad_norm: True
   optimizer: adamW
-  weight_decay: 1e-5
-  base_lr: 0.0001
+  weight_decay: 0.0
+  base_lr: 0.0005
   max_epoch: 100
   scheduler: cosine_with_warmup
   num_warmup_epochs: 5
-#optim:
-#  clip_grad_norm: True
-#  optimizer: adamW
-#  weight_decay: 1e-5
-#  base_lr: 0.0001
-#  max_epoch: 100
-#  scheduler: reduce_on_plateau
-#  reduce_factor: 0.5
-#  schedule_patience: 5
-#  min_lr: 1e-6

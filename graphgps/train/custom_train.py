@@ -16,8 +16,8 @@ from graphgps.utils import cfg_to_dict, flatten_dict, make_wandb_name, make_wand
 def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation):
     model.train()
     optimizer.zero_grad()
-    time_start = time.time()
-    for iter, batch in enumerate(loader):
+    for itr, batch in enumerate(loader):
+        time_start = time.time()
         batch.split = 'train'
         batch.to(torch.device(cfg.device))
         pred, true = model(batch)
@@ -31,7 +31,7 @@ def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation)
             _pred = pred_score.detach().to('cpu', non_blocking=True)
         loss.backward()
         # Parameters update after accumulating gradients for given num. batches.
-        if ((iter + 1) % batch_accumulation == 0) or (iter + 1 == len(loader)):
+        if ((itr + 1) % batch_accumulation == 0) or (itr + 1 == len(loader)):
             if cfg.optim.clip_grad_norm:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
@@ -43,7 +43,7 @@ def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation)
                             time_used=time.time() - time_start,
                             params=cfg.params,
                             dataset_name=cfg.dataset.name)
-        time_start = time.time()
+    time_start = time.time()
 
 
 @torch.no_grad()
@@ -108,6 +108,10 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
             wandb_name = make_wandb_name(cfg)
         else:
             wandb_name = cfg.wandb.name
+        if cfg.wandb.dir == '':
+            wandb_dir = make_wandb_dir(cfg)
+        else:
+            wandb_dir = cfg.wandb.dir
         run = wandb.init(entity=cfg.wandb.entity, project=cfg.wandb.project,
                 name=wandb_name, mode=cfg.wandb.mode, dir=getattr(cfg.wandb, 'dir', make_wandb_dir(cfg)))
         run.config.update(cfg_to_dict(cfg))

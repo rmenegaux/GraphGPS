@@ -24,7 +24,8 @@ from graphgps.transform.posenc_stats import compute_posenc_stats
 from graphgps.transform.transforms import (pre_transform_in_memory,
                                            typecast_x, concat_x_and_pos,
                                            clip_graphs_to_size,
-                                           add_rings)
+                                           add_rings,
+                                           compute_shortest_paths)
 
 
 def log_loaded_dataset(dataset, format, name):
@@ -178,7 +179,8 @@ def load_dataset_master(format, name, dataset_dir):
     for key, pecfg in cfg.items():
         if key.startswith('posenc_') and pecfg.enable:
             pe_name = key.split('_', 1)[1]
-            pe_enabled_list.append(pe_name)
+            if pecfg.precompute:
+                pe_enabled_list.append(pe_name)
             if hasattr(pecfg, 'kernel'):
                 # Generate kernel times if functional snippet is set.
                 if pecfg.kernel.times_func:
@@ -204,6 +206,22 @@ def load_dataset_master(format, name, dataset_dir):
                   + f'{elapsed:.2f}'[-3:]
         logging.info(f"Done! Took {timestr}")
 
+    # Add shortest path length information
+    if not hasattr(cfg.dataset, 'spd'):
+        cfg.dataset.spd = False
+    if cfg.dataset.spd == True:
+        start = time.perf_counter()
+        logging.info(f"Adding shortest path distance up to length: "
+                     f"{cfg.dataset.spd_max_length} for all graphs...")
+        pre_transform_in_memory(dataset,
+                                partial(compute_shortest_paths, config=cfg.dataset),
+                                show_progress=True
+                                )
+        elapsed = time.perf_counter() - start
+        timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
+                  + f'{elapsed:.2f}'[-3:]
+        logging.info(f"Done! Took {timestr}")
+        
     # Add ring information for molecular datasets
     if not hasattr(cfg.dataset, 'rings'):
         cfg.dataset.rings = False
@@ -339,6 +357,11 @@ def preformat_OGB_Graph(dataset_dir, name):
             data.x = torch.zeros(data.num_nodes, dtype=torch.long)
             return data
         dataset.transform = add_zeros
+    elif name == 'ogbg-molpcba':
+        # Subset graphs to a maximum size (number of nodes) limit.
+        # This affects only very few graphs, which crash GPU memory in GraphiT
+        pre_transform_in_memory(dataset, partial(clip_graphs_to_size,
+                                                 size_limit=128))
     elif name == 'ogbg-code2':
         from graphgps.loader.ogbg_code2_utils import idx2vocab, \
             get_vocab_mapping, augment_edge, encode_y_to_arr
@@ -414,8 +437,10 @@ def preformat_OGB_PCQM4Mv2(dataset_dir, name):
     elif name == 'subset':
         # Further subset the training set for faster debugging.
         subset_ratio = 0.1
+        #subset_ratio = 0.001
         subtrain_idx = train_idx[:int(subset_ratio * len(train_idx))]
         subvalid_idx = valid_idx[:50000]
+        #subvalid_idx = valid_idx[:500]
         subtest_idx = split_idx['valid']  # The original 'valid' as testing set.
         dataset = dataset[torch.cat([subtrain_idx, subvalid_idx, subtest_idx])]
         n1, n2, n3 = len(subtrain_idx), len(subvalid_idx), len(subtest_idx)
@@ -425,6 +450,8 @@ def preformat_OGB_PCQM4Mv2(dataset_dir, name):
     else:
         raise ValueError(f'Unexpected OGB PCQM4Mv2 subset choice: {name}')
     dataset.split_idxs = split_idxs
+    pre_transform_in_memory(dataset, partial(clip_graphs_to_size,
+                                             size_limit=63)) 
     return dataset
 
 

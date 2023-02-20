@@ -24,14 +24,14 @@ function run_repeats {
     echo "  output dir: ${out_dir}"
 
     # Run each repeat as a separate job
-    #for SEED in {0..3}; do
-    #    script="sbatch -J ${cfg_suffix}-${dataset} -C v100-32g --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 seed ${SEED} ${common_params}"
-    #    echo $script
-    #    eval $script
-    #done
-    script="sbatch -J ${cfg_suffix}-${dataset} -C v100-32g --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1  ${common_params}"
-    echo $script
-    eval $script
+    for SEED in {0..3}; do
+        script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 seed ${SEED} ${common_params}"
+        echo $script
+        eval $script
+    done
+    #script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1  ${common_params}"
+    #echo $script
+    #eval $script
 }
 
 
@@ -50,11 +50,11 @@ done
 
 # Comment-out runs that you don't want to submit.
 main_dir="/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS"
-cfg_dir="${main_dir}/configs/GPS"
+cfg_dir="${main_dir}/configs/ZINC"
 
 DATASET="zinc"
-cfg_suffix="GraphiT_EJ_tests" #"GPS+RWSE+Rings-GraphiT_EJ_tests" # "GraphiT_EJ_tests"
-name="'QK+E_mono*V_DptConn_4seeds'"
+cfg_suffix="GraphiT_EJ_Q+K+E_multi_V+E_multi_noHeads_DoubleScaling" #"GPS+RWSE+Rings-GraphiT_EJ_tests" # "GraphiT_EJ_tests"
+name="'Q+K+E_multi_V+E_multi_DptConn_noHeads_DoubleScaling_4seeds'"
 #addition="'addition'"
 #multiplication="'multiplication'"
 #QK_op="'QK_op'"
@@ -68,17 +68,6 @@ args="name_tag ${name} wandb.mode offline"
 
 run_repeats ${DATASET} ${cfg_suffix} "${args}"
 
-DATASET="zinc"
-addition="addition"
-multiplication="multiplication"
-QK_op="QK_op"
-KE_op="KE_op"
-VE_op="VE_op"
-dropout_lvl="dropout_lvl"
-connections="connections"
-edge_out_dim="edge_out_dim"
-args="name_tag (Q+K+E_multi)*(V*E_multi)_DptConn_noHeads_4seeds wandb.mode 'offline' dataset.dir '/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets/ZINC' n_heads 1 wandb.name '(Q+K+E_multi)*(V*E_multi)_DptConn_noHeads' gt.layer_args '[{${QK_op}:${addition}}, {${KE_op}:${addition}}, {${VE_op}:${multiplication}}, {${dropout_lvl}:${connections}}, {${edge_out_dim}:null}]'"
-run_repeats ${DATASET} GraphiT_EJ_tests "${args}"
 
 # DATASET="mnist"
 # run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.10run"
