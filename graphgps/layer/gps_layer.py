@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch_geometric.graphgym.register as register
 import torch_geometric.nn as pygnn
 from performer_pytorch import SelfAttention
 from torch_geometric.data import Batch
@@ -20,7 +20,7 @@ class GPSLayer(nn.Module):
     """
 
     def __init__(self, dim_h,
-                 local_gnn_type, global_model_type, num_heads,
+                 local_gnn_type, global_model_type, num_heads, act='relu',
                  pna_degrees=None, equivstable_pe=False, dropout=0.0,
                  attn_dropout=0.0, layer_norm=False, batch_norm=True,
                  bigbird_cfg=None, graphiT_share=False):
@@ -32,6 +32,7 @@ class GPSLayer(nn.Module):
         self.layer_norm = layer_norm
         self.batch_norm = batch_norm
         self.equivstable_pe = equivstable_pe
+        self.activation = register.act_dict[act]
 
         # Local message-passing model.
         if local_gnn_type == 'None':
@@ -40,7 +41,7 @@ class GPSLayer(nn.Module):
             self.local_model = pygnn.GENConv(dim_h, dim_h)
         elif local_gnn_type == 'GINE':
             gin_nn = nn.Sequential(Linear_pyg(dim_h, dim_h),
-                                   nn.ReLU(),
+                                   self.activation,
                                    Linear_pyg(dim_h, dim_h))
             if self.equivstable_pe:  # Use specialised GINE layer for EquivStableLapPE.
                 self.local_model = GINEConvESLapPE(gin_nn)
@@ -124,7 +125,6 @@ class GPSLayer(nn.Module):
         self.dropout_attn = nn.Dropout(dropout)
 
         # Feed Forward block.
-        self.activation = F.relu
         self.ff_linear1 = nn.Linear(dim_h, dim_h * 2)
         self.ff_linear2 = nn.Linear(dim_h * 2, dim_h)
         if self.layer_norm:

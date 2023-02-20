@@ -87,6 +87,7 @@ class GPSModel(torch.nn.Module):
                 pna_degrees=cfg.gt.pna_degrees,
                 equivstable_pe=cfg.posenc_EquivStableLapPE.enable,
                 dropout=cfg.gt.dropout,
+                act=cfg.gnn.act,
                 attn_dropout=cfg.gt.attn_dropout,
                 layer_norm=cfg.gt.layer_norm,
                 batch_norm=cfg.gt.batch_norm,
