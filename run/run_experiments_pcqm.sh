@@ -25,7 +25,7 @@ function run_repeats {
 
     # Run each repeat as a separate job
     for SEED in 0; do
-        script="sbatch -J ${cfg_suffix}-${dataset} run/wrapper_large.sb ${main} --repeat 1 seed ${SEED} wandb.use True wandb.mode "offline" ${common_params}"
+        script="sbatch -J ${cfg_suffix}-${dataset} run/wrapper_a100.sb ${main} --repeat 1 seed ${SEED} wandb.use True wandb.mode "offline" ${common_params}"
         echo $script
         eval $script
     done
@@ -46,12 +46,12 @@ done
 ################################################################################
 
 # Comment-out runs that you don't want to submit.
-cfg_dir="configs/GPS"
+cfg_dir="configs/GraphiT"
 
-DATASET="pcqm4m"
+DATASET="pcqm4m_full"
 #run_repeats ${DATASET} "GraphiTmedium+RWSE.lr0002.dropout0.1" "name_tag GraphiTmedium+RWSE.lr0002.dropout0.1 train.auto_resume True train.ckpt_period 2"
 #run_repeats ${DATASET} "GraphiTmedium+RWSE.lr0005.dropout0.5" "name_tag GraphiTmedium+RWSE.lr0005.dropout0.5 train.auto_resume True train.ckpt_period 2"
 #run_repeats ${DATASET} "GraphiTmedium+RWSE.lr0002.dropout0.5" "name_tag GraphiTmedium+RWSE.lr0002.dropout0.5 train.auto_resume True train.ckpt_period 2"
-run_repeats ${DATASET} "GraphiTmedium+RWSE-Rings.lr0002.dropout0.1" "name_tag GraphiTmedium+RWSE-Rings.lr0002.dropout0.1 train.auto_resume True train.ckpt_period 2"
-run_repeats ${DATASET} "GraphiT+RWSE-Rings" "name_tag GraphiT+RWSE-Rings train.auto_resume True train.ckpt_period 2"
-#run_repeats ${DATASET} "GraphiT+RWSE" "name_tag GraphiT+RWSE train.auto_resume True train.ckpt_period 2"
+#run_repeats ${DATASET} "GraphiTmedium+RWSE-Rings.lr0002.dropout0.1" "name_tag GraphiTmedium+RWSE-Rings.lr0002.dropout0.1 train.auto_resume True train.ckpt_period 2"
+#run_repeats ${DATASET} "GraphiT+RWSE-Rings" "name_tag GraphiT+RWSE-Rings train.auto_resume True train.ckpt_period 2"
+run_repeats ${DATASET} "GraphiT+RWSE-shared-Rings" "name_tag speedrun train.auto_resume True train.ckpt_period 5"
