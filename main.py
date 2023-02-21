@@ -174,10 +174,10 @@ if __name__ == '__main__':
         print(f'WEIGHTS LOADED FROM EP {start_epoch}')
         # One time Inference to get the attention scores
         scores, E_att, E_value, batch = eval_epoch(loggers[2], loaders[2], model, split='test')
-        torch.save(scores, f'scores_{cfg.wandb.name}.pt')
-        torch.save(E_att, f'Ea_{cfg.wandb.name}.pt')
-        torch.save(E_value, f'Ev_{cfg.wandb.name}.pt')
-        torch.save(batch, f'batch_{cfg.wandb.name}.pt')
+        torch.save(scores, f'extracted/{cfg.wandb.name}/scores.pt')
+        torch.save(E_att, f'extracted/{cfg.wandb.name}/Ea.pt')
+        torch.save(E_value, f'extracted/{cfg.wandb.name}/Ev.pt')
+        torch.save(batch, f'extracted/{cfg.wandb.name}/batch.pt')
         import sys; sys.exit()
 
     # Aggregate results from different seeds
