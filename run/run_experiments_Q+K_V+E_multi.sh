@@ -25,11 +25,11 @@ function run_repeats {
 
     # Run each repeat as a separate job
     # for SEED in {0..3}; do
-    #     script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 seed ${SEED} ${common_params}"
+    #     script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 seed ${SEED} train.auto_resume True ${common_params}"
     #     echo $script
     #     eval $script
     # done
-    script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 train.auto_resume True ${common_params}"
+    script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 ${common_params}"
     echo $script
     eval $script
 }
@@ -53,8 +53,8 @@ main_dir="/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS"
 cfg_dir="${main_dir}/configs/LRGB"
 
 DATASET="pcqm4m_subset"
-cfg_suffix="GraphiT_EJ_Q+K+E_multi_VE_multi_noHeads_DoubleScaling"
-name="'Q+K+E_multi_VE_multi_DptConn_noHeads_DoubleScaling_4seeds'"
+cfg_suffix="GraphiT_EJ_Q+K_V+E_multi"
+name="'Q+K_V+E_multi_DptConn_4seeds'"
 #addition="'addition'"
 #multiplication="'multiplication'"
 #QK_op="'QK_op'"

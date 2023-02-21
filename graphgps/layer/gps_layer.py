@@ -192,7 +192,7 @@ class GPSLayer(nn.Module):
                     edge_index, _ = add_self_loops(batch.edge_index)
                     attn_mask = to_dense_adj(edge_index, batch.batch)
                 attn_mask = attn_mask.view(n_batch, num_nodes, num_nodes, 1, 1)
-                h_attn, self.scores, self.E, self.E_value = self.self_attn(h_dense, edge_features=edge_dense,
+                h_attn, self.scores, self.E_att, self.E_value = self.self_attn(h_dense, edge_features=edge_dense,
                                                                            e_att=edge_att, e_value=edge_values,
                                                                            attn_mask=attn_mask)
                 self.batch = batch

@@ -102,7 +102,7 @@ class GPSModel(torch.nn.Module):
 
     def forward(self, batch):
         all_scores = []
-        all_E = []
+        all_E_att = []
         all_E_value = []
         i = 0
         for module in self.children():
@@ -110,10 +110,9 @@ class GPSModel(torch.nn.Module):
             if i==1:
                 for idx in range(len(module)):
                     all_scores.append((module[idx].scores))
-                    all_E.append((module[idx].E))
+                    all_E_att.append((module[idx].E_att))
                     all_E_value.append((module[idx].E_value))
                     saved_batch = module[idx].batch
             i+=1
 
-        return all_scores, all_E, all_E_value, saved_batch
-        return batch
+        return all_scores, all_E_att, all_E_value, saved_batch

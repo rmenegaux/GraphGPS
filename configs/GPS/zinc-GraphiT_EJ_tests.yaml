@@ -5,9 +5,11 @@ wandb:
   use: True
   project: ZINC_seeds
   entity: emmanuel-jehanno
-  name: (QK+E)*(V+E)_multi_DptConn
+  name: (Q+K)*(V+E)_DptConn
+  #dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/
 dataset:
-  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets/
+  #dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets/
+  dir: /home/ejehanno/repos/
   format: PyG-ZINC
   name: subset
   task: graph
@@ -52,9 +54,9 @@ gt:
   batch_norm: True
   #mask_type: adj
   layer_args:
-    - QK_op: multiplication
-    - KE_op: addition
-    - edge_out_dim: 1
+    - QK_op: addition
+    - KE_op: null
+    - edge_out_dim: null
     - dropout_lvl: connections
     - VE_op: addition
 gnn:
