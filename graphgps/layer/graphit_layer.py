@@ -56,7 +56,7 @@ class GraphiT_Layer(nn.Module):
                  use_bias=False, use_edge_features=True,
                  attn_dropout=0.0, QK_op='multiplication', KE_op='addition',
                  VE_op=None, edge_out_dim=None, share_edge_features=True,
-                 dropout_lvl='connections'):
+                 dropout_lvl='connections', scaling='single'):
         super().__init__()
         
         self.out_dim = out_dim
@@ -66,6 +66,7 @@ class GraphiT_Layer(nn.Module):
         self.KE_op = KE_op
         self.VE_op = VE_op
         self.dropout_lvl = dropout_lvl
+        self.scaling = scaling
         self.share_edge_features = share_edge_features
         
         self.Q = nn.Linear(in_dim, out_dim * num_heads, bias=use_bias)
@@ -98,17 +99,18 @@ class GraphiT_Layer(nn.Module):
 
         # Normalize by sqrt(head dimension)
         scaling = float(self.out_dim) ** -0.5
-        K = K * scaling
-        # Q = Q * scaling # must be uncommented for DoubleScaling
+        if self.scaling is not None:
+            K = K * scaling
+            if self.scaling=='double':
+                Q = Q * scaling
 
         if self.use_edge_features:
             E_att = e_att if self.share_edge_features else self.E_att(edge_features)  # [n_batch, num_nodes, num_nodes, out_dim * num_heads]
             E_att = E_att.view(n_batch, num_nodes, num_nodes, self.num_heads, -1)  # [n_batch, num_nodes, num_nodes, num_heads, out_dim or 1]
             if self.QK_op == 'multiplication':
-                #K = K * scaling
                 if self.KE_op == 'multiplication':  # Attention is Q . K . E
                     scores = torch.einsum('bihk,bjhk,bijhk->bijh', Q, K, E_att).unsqueeze(-1)
-                else: # means addition, # Attention is Q . K + E(multi_dim or scalar)
+                elif self.KE_op == 'addition': # means addition, # Attention is Q . K + E(multi_dim or scalar)
                     # scores = torch.einsum('bihk,bjhk->bijh', Q, K).unsqueeze(-1) + E  # eventually it ends with dimension of 1
                     scores = torch.matmul(
                         Q.permute(0, 2, 1, 3).contiguous(),  # bhik
@@ -116,11 +118,13 @@ class GraphiT_Layer(nn.Module):
                     ).permute(0, 2, 3, 1).unsqueeze(-1)      # bhij -> bijh
                     scores = scores + E_att
 
+            elif self.QK_op == 'addition': # Attention is Q + K (+ E)
+                scores = Q.unsqueeze(2) + K.unsqueeze(1) # (bi1hk + b1jhk)
+                if self.KE_op is not None:
+                    scores = scores + E_att  # (bijhk + bijhk)
+
             elif self.QK_op is None:
                 scores = E_att
-
-            else: # means addition, Attention is Q + K + E
-                scores = Q.unsqueeze(2) + K.unsqueeze(1) + E_att  # (bi1hk + b1jhk + bijhk)
 
             # scores is in bijhk, with k being eventually 1
         else:

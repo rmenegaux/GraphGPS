@@ -5,7 +5,7 @@ wandb:
   use: True
   project: pcqm4m-subset
   entity: emmanuel-jehanno
-  name: (QK+E_multi)*V_DptConn_noRings
+  name: (Q+K+E_multi)*(V+E_multi)_DptConn_noHeads_DoubleScaling
   dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/
 dataset:
   dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets
@@ -20,6 +20,9 @@ dataset:
   edge_encoder: True
   edge_encoder_name: Bond+RWSE
   edge_encoder_bn: False
+  rings: False
+  rings_max_length: 6
+  rings_coalesce_edges: False
 posenc_RWSE:
   enable: True
   precompute: True
@@ -40,23 +43,24 @@ model:
 gt:
   layer_type: None+GraphiT
   layers: 5
-  n_heads: 4
-  dim_hidden: 304  # `gt.dim_hidden` must match `gnn.dim_inner`
+  n_heads: 1
+  dim_hidden: 256  # `gt.dim_hidden` must match `gnn.dim_inner`
   dropout: 0.0
   attn_dropout: 0.5
   layer_norm: False
   batch_norm: True
   layer_args:
-    - QK_op: multiplication
+    - QK_op: addition
     - KE_op: addition
-    - edge_out_dim: null
+    - edge_out_dim: 1
     - dropout_lvl: connections
-    - VE_op: null
+    - VE_op: addition
+    - scaling: double
 gnn:
   head: san_graph
   layers_pre_mp: 0
   layers_post_mp: 3
-  dim_inner: 304  # `gt.dim_hidden` must match `gnn.dim_inner`
+  dim_inner: 256  # `gt.dim_hidden` must match `gnn.dim_inner`
   batchnorm: True
   act: relu
   dropout: 0.0
@@ -67,4 +71,4 @@ optim:
   base_lr: 0.0005
   max_epoch: 100
   scheduler: cosine_with_warmup
-  num_warmup_epochs: 5
+  num_warmup_epochs: 10

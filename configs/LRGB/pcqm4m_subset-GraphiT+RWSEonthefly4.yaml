@@ -5,7 +5,7 @@ wandb:
   use: True
   project: pcqm4m-subset
   entity: emmanuel-jehanno
-  name: (QK+E_mono)*V_DptConn
+  name: (QK+E_mono)*V_DptConn_noRings
   dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/
 dataset:
   dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets
