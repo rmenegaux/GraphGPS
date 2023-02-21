@@ -21,10 +21,12 @@ from torch_geometric.graphgym.utils.comp_budget import params_count
 from torch_geometric.graphgym.utils.device import auto_select_device
 from torch_geometric.graphgym.register import train_dict
 from torch_geometric import seed_everything
+from torch_geometric.graphgym.checkpoint import load_ckpt
 
 from graphgps.finetuning import load_pretrained_model_cfg, \
     init_model_from_pretrained
 from graphgps.logger import create_logger
+from graphgps.train.custom_train import eval_epoch
 
 
 def new_optimizer_config(cfg):
@@ -32,8 +34,6 @@ def new_optimizer_config(cfg):
                            base_lr=cfg.optim.base_lr,
                            weight_decay=cfg.optim.weight_decay,
                            momentum=cfg.optim.momentum)
-    # TODO: Find a way to do something like that ? Restricting chosen arguments
-    return ExtendedSchedulerConfig(**cfg.optim.__dict__)
 
 
 def new_scheduler_config(cfg):
@@ -44,9 +44,6 @@ def new_scheduler_config(cfg):
         schedule_patience=cfg.optim.schedule_patience, min_lr=cfg.optim.min_lr,
         num_warmup_epochs=cfg.optim.num_warmup_epochs,
         train_mode=cfg.train.mode, eval_period=cfg.train.eval_period)
-    # TODO: Find a way to do something like that ? Restricting chosen arguments
-    setattr(cfg.optim, 'train_mode', cfg.train.mode)
-    return ExtendedSchedulerConfig(**cfg.optim.__dict__)
 
 
 def custom_set_out_dir(cfg, cfg_fname, name_tag):
@@ -168,32 +165,21 @@ if __name__ == '__main__':
                                      new_optimizer_config(cfg))
         scheduler = create_scheduler(optimizer, new_scheduler_config(cfg))
         # Print model info
-        # TOFIX: comment or uncomment thats
-        # logging.info(model)
-        # logging.info(cfg)
         cfg.params = params_count(model)
         logging.info('Num parameters: %s', cfg.params)
-        # Start training
-        from torch_geometric.graphgym.checkpoint import load_ckpt
+        
+        # Reload weights
         start_epoch = load_ckpt(model, optimizer, scheduler,
                   cfg.train.epoch_resume)
         print(f'WEIGHTS LOADED FROM EP {start_epoch}')
-        from graphgps.train.custom_train import eval_epoch
+        # One time Inference to get the attention scores
         scores, E, E_value, batch = eval_epoch(loggers[2], loaders[2], model, split='test')
-        torch.save(scores, 'scores_(QK+E)*(V+E)_multi_DptConn.pt')
-        torch.save(E, 'E_(QK+E)*(V+E)_multi_DptConn.pt')
-        torch.save(E_value, 'Ev_(QK+E)*(V+E)_multi_DptConn.pt')
-        torch.save(batch, 'batch_(QK+E)*(V+E)_multi_DptConn.pt')
+        torch.save(scores, f'scores_{cfg.wandb.name}.pt')
+        torch.save(E, f'E_{cfg.wandb.name}.pt')
+        torch.save(E_value, f'Ev_{cfg.wandb.name}.pt')
+        torch.save(batch, f'batch_{cfg.wandb.name}.pt')
         import sys; sys.exit()
 
-        if cfg.train.mode == 'standard':
-            if cfg.wandb.use:
-                logging.warning("[W] WandB logging is not supported with the "
-                                "default train.mode, set it to `custom`")
-            train(loggers, loaders, model, optimizer, scheduler)
-        else:
-            train_dict[cfg.train.mode](loggers, loaders, model, optimizer,
-                                       scheduler)
     # Aggregate results from different seeds
     try:
         agg_runs(cfg.out_dir, cfg.metric_best)
