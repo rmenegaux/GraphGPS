@@ -30,6 +30,6 @@ args=$1
 echo "$args"
 # config="configs/GPS/zinc-GraphiT+Rings-RWSEfly.yaml"
 config_name="ogbg-molpcba-GraphiT+RWSE"
-config_name="pcqm4m_subset-GraphiTmedium+RWSE"
+config_name="pcqm4m_subset-GraphiTmediumGelu+RWSE"
 config="configs/GraphiT/${config_name}.yaml"
-python main.py --cfg $config  wandb.use True wandb.mode "offline" wandb.name "${config_name}.speedrun.r0"
+python main.py --cfg $config  wandb.use True wandb.mode "offline" wandb.name "${config_name}-postPooling"
