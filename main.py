@@ -119,7 +119,7 @@ if __name__ == '__main__':
     # Load config file
     set_cfg(cfg)
     load_cfg(cfg, args)
-    custom_set_out_dir(cfg, args.cfg_file, cfg.name_tag)
+    # custom_set_out_dir(cfg, args.cfg_file, cfg.name_tag)
     dump_cfg(cfg)
     # Set Pytorch environment
     torch.set_num_threads(cfg.num_threads)
@@ -153,6 +153,8 @@ if __name__ == '__main__':
                      f"split_index={cfg.dataset.split_index}")
         logging.info(f"    Starting now: {datetime.datetime.now()}")
         # Set machine learning pipeline
+        setattr(cfg.wandb, 'dir', '')
+        setattr(cfg.dataset, 'dir', '/home/ejehanno/repos/')
         loaders = create_loader()
         loggers = create_logger()
         model = create_model()
@@ -169,15 +171,23 @@ if __name__ == '__main__':
         logging.info('Num parameters: %s', cfg.params)
         
         # Reload weights
-        start_epoch = load_ckpt(model, optimizer, scheduler,
-                  cfg.train.epoch_resume)
+        # From: /scratch2/clear/ejehanno/models_weights/zinc-GraphiT_EJ_tests-Q+K+E_multi*V*E_multi_DptConn_noHeads_4seeds_fullEP_doubleScaling
+        # extracted_path = os.path.join(extracted_path, os.listdir(extracted_path)[0])
+        weights_dir = '/scratch2/clear/ejehanno/models_weights/'
+        run_dir = os.path.join(weights_dir, '/'.join(cfg.run_dir.split('/')[2:]))
+        setattr(cfg, 'run_dir', run_dir)
+
+        start_epoch = load_ckpt(model, optimizer, scheduler, -1)
         print(f'WEIGHTS LOADED FROM EP {start_epoch}')
         # One time Inference to get the attention scores
         scores, E_att, E_value, batch = eval_epoch(loggers[2], loaders[2], model, split='test')
-        torch.save(scores, f'extracted/{cfg.wandb.name}/scores.pt')
-        torch.save(E_att, f'extracted/{cfg.wandb.name}/Ea.pt')
-        torch.save(E_value, f'extracted/{cfg.wandb.name}/Ev.pt')
-        torch.save(batch, f'extracted/{cfg.wandb.name}/batch.pt')
+        res_dir = f'/scratch2/clear/ejehanno/extracted/{cfg.wandb.name}'
+        if not os.path.exists(res_dir):
+            os.makedirs(res_dir)
+        torch.save(scores, f'{res_dir}/scores.pt')
+        torch.save(E_att, f'{res_dir}/Ea.pt')
+        torch.save(E_value, f'{res_dir}/Ev.pt')
+        torch.save(batch, f'{res_dir}/batch.pt')
         import sys; sys.exit()
 
     # Aggregate results from different seeds
