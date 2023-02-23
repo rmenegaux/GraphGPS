@@ -11,6 +11,52 @@ from graphgps.layer.gps_layer import GPSLayer
 from graphgps.utils import CudaTimer
 
 
+def add_graph_token(data, token):
+    """Helper function to augment a batch of PyG graphs
+    with a graph token each. Note that the token is
+    automatically replicated to fit the batch.
+    Args:
+        data: A PyG data object holding a single graph
+        token: A tensor containing the graph token values
+    Returns:
+        The augmented data object.
+    """
+    B = len(data.batch.unique())
+    tokens = torch.repeat_interleave(token, B, 0)
+    data.x = torch.cat([tokens, data.x], 0)
+    data.batch = torch.cat(
+        [torch.arange(0, B, device=data.x.device, dtype=torch.long), data.batch]
+    )
+    data.batch, sort_idx = torch.sort(data.batch)
+    data.x = data.x[sort_idx]
+    return data
+
+def add_virtual_edges(dense_edges, token):
+    n_batch, num_nodes, _, out_dim = dense_edges.shape
+    token = token.expand(n_batch, out_dim)
+    dense_edges = torch.cat([dense_edges, token.unsqueeze(1).expand(n_batch, num_nodes, out_dim).unsqueeze(1)], dim=1)
+    dense_edges = torch.cat([dense_edges, token.unsqueeze(1).expand(n_batch, num_nodes+1, out_dim).unsqueeze(2)], dim=2)
+    return dense_edges
+
+class CLSEncoder(torch.nn.Module):
+    """
+    Encoding node and edge features
+
+    Args:
+        dim_in (int): Input feature dimension
+    """
+    def __init__(self, embed_dim):
+        super(CLSEncoder, self).__init__()
+        self.node_token = torch.nn.Parameter(torch.zeros(1, embed_dim))
+        self.edge_att_token = torch.nn.Parameter(torch.zeros(1, embed_dim))
+        self.edge_value_token = torch.nn.Parameter(torch.zeros(1, embed_dim))
+
+    def forward(self, batch):
+        batch = add_graph_token(batch, self.node_token)
+        batch.edge_attention = add_virtual_edges(batch.edge_attention, self.edge_att_token)
+        batch.edge_values = add_virtual_edges(batch.edge_values, self.edge_value_token)
+        return batch
+
 class FeatureEncoder(torch.nn.Module):
     """
     Encoding node and edge features
@@ -45,6 +91,8 @@ class FeatureEncoder(torch.nn.Module):
                 self.edge_encoder_bn = BatchNorm1dNode(
                     new_layer_config(cfg.gnn.dim_edge, -1, -1, has_act=False,
                                      has_bias=False, cfg=cfg))
+        if cfg.model.graph_pooling == 'first':
+            self.cls_encoder = CLSEncoder(cfg.gnn.dim_inner)
 
     def forward(self, batch):
         for module in self.children():
