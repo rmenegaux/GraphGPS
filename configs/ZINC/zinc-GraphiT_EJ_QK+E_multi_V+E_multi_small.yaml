@@ -2,7 +2,7 @@ out_dir: results
 metric_best: mae
 metric_agg: argmin
 wandb:
-  use: False
+  use: True
   project: ZINC_seeds
   entity: emmanuel-jehanno
   name: (QK+E)*(V+E)_DptConn_VerySmall_vf
