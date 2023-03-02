@@ -117,17 +117,3 @@ run_repeats ${DATASET} ${cfg_suffix} "${args}"
 cfg_dir="configs/SAN"
 DATASET="pattern"
 #run_repeats ${DATASET} SAN "name_tag SAN.LapPE.10run"
-
-GraphiT_EJ_E_multi_V+E_multi
-GraphiT_EJ_Q+K_V+E_multi
-GraphiT_EJ_Q+K+E_mono_V+E_multi
-GraphiT_EJ_Q+K+E_mono_VE_multi
-GraphiT_EJ_Q+K+E_multi_V
-GraphiT_EJ_Q+K+E_multi_V+E_multi_noHeads_DoubleScaling
-GraphiT_EJ_Q+K+E_multi_V+E_multi_noHeads_NoScaling
-GraphiT_EJ_Q+K+E_multi_V+E_multi_noHeads
-GraphiT_EJ_Q+K+E_multi_V+E_multi
-GraphiT_EJ_Q+K+E_multi_VE_multi_noHeads_DoubleScaling
-GraphiT_EJ_Q+K+E_multi_VE_multi_noHeads_NoScaling
-GraphiT_EJ_Q+K+E_multi_VE_multi_noHeads
-GraphiT_EJ_Q+K+E_multi_VE_multi
