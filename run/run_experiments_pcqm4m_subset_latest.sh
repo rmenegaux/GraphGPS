@@ -53,7 +53,7 @@ main_dir="/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS"
 cfg_dir="${main_dir}/configs/LRGB"
 
 DATASET="pcqm4m_subset"
-cfg_suffix="GraphiT_EJ_QK+E_multi_V+E_multi" #"GPS+RWSE+Rings-GraphiT_EJ_tests" # "GraphiT_EJ_tests"
+cfg_suffix="GraphiT_EJ_QK+E_multi_V+E_multi_latest" #"GPS+RWSE+Rings-GraphiT_EJ_tests" # "GraphiT_EJ_tests"
 name="'QK+E_multi*V+E_multi_DptConn_latest_4seeds'"
 #addition="'addition'"
 #multiplication="'multiplication'"
