@@ -6,9 +6,9 @@ wandb:
   project: pcqm4m-subset
   entity: emmanuel-jehanno
   name: (QK+E)*(V+E)_GINE_DptConn
-  #dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/
+  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/
 dataset:
-  dir: /scratch2/clear/ejehanno/datasets/
+  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets
   format: OGB
   name: PCQM4Mv2-subset
   task: graph

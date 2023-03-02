@@ -5,10 +5,10 @@ wandb:
   use: True
   project: ZINC_seeds
   entity: emmanuel-jehanno
-  name: (QK+E)*(V+E)_DptConn_VerySmall
-  #dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/
+  name: (QK+E)*(V+E)_DptConn_VerySmall_vf
+  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/
 dataset:
-  dir: /home/ejehanno/repos/
+  dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets/
   format: PyG-ZINC
   name: subset
   task: graph

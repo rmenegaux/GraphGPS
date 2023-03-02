@@ -53,8 +53,8 @@ main_dir="/gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS"
 cfg_dir="${main_dir}/configs/LRGB"
 
 DATASET="pcqm4m_subset"
-cfg_suffix="GraphiT+RWSEonthefly" #"GPS+RWSE+Rings-GraphiT_EJ_tests" # "GraphiT_EJ_tests"
-name="'QK+E_multi*V+E_multi_DptConn_rings_4seeds'"
+cfg_suffix="GINE+GraphiT_EJ_QK+E_multi_V+E_multi" #"GPS+RWSE+Rings-GraphiT_EJ_tests" # "GraphiT_EJ_tests"
+name="'GINE+QK+E_multi*V+E_multi_DptConn_4seeds'"
 #addition="'addition'"
 #multiplication="'multiplication'"
 #QK_op="'QK_op'"
@@ -117,3 +117,17 @@ run_repeats ${DATASET} ${cfg_suffix} "${args}"
 cfg_dir="configs/SAN"
 DATASET="pattern"
 #run_repeats ${DATASET} SAN "name_tag SAN.LapPE.10run"
+
+GraphiT_EJ_E_multi_V+E_multi
+GraphiT_EJ_Q+K_V+E_multi
+GraphiT_EJ_Q+K+E_mono_V+E_multi
+GraphiT_EJ_Q+K+E_mono_VE_multi
+GraphiT_EJ_Q+K+E_multi_V
+GraphiT_EJ_Q+K+E_multi_V+E_multi_noHeads_DoubleScaling
+GraphiT_EJ_Q+K+E_multi_V+E_multi_noHeads_NoScaling
+GraphiT_EJ_Q+K+E_multi_V+E_multi_noHeads
+GraphiT_EJ_Q+K+E_multi_V+E_multi
+GraphiT_EJ_Q+K+E_multi_VE_multi_noHeads_DoubleScaling
+GraphiT_EJ_Q+K+E_multi_VE_multi_noHeads_NoScaling
+GraphiT_EJ_Q+K+E_multi_VE_multi_noHeads
+GraphiT_EJ_Q+K+E_multi_VE_multi

@@ -5,7 +5,7 @@ wandb:
   use: True
   project: ZINC_seeds
   entity: emmanuel-jehanno
-  name: (QK+E)*(V+E)_GINE_DptConn_vf
+  name: '(QK+E_multi)*(V+E_multi)_DptConn_latest_4seeds'
   dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/wandb/
 dataset:
   dir: /gpfswork/rech/tbr/ump88gx/EJ_GraphGPS/GraphGPS/datasets/
@@ -43,7 +43,7 @@ model:
   edge_decoding: dot
   graph_pooling: add
 gt:
-  layer_type: GINE+GraphiT  # CustomGatedGCN+Performer
+  layer_type: None+GraphiT  # CustomGatedGCN+Performer
   layers: 10
   n_heads: 4
   dim_hidden: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
