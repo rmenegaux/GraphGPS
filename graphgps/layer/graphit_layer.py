@@ -75,7 +75,7 @@ class GraphiT_Layer(nn.Module):
             # assert (self.QK_op in ['multiplication', 'addition']) and (self.KE_op in ['multiplication', 'addition'])
             self.edge_out_dim = 1 if (self.QK_op=='multiplication' and self.KE_op=='addition' and edge_out_dim==1) else out_dim
             if not self.share_edge_features:
-                self.E = nn.Linear(in_dim_edges, self.edge_out_dim * num_heads, bias=use_bias)
+                self.E_att = nn.Linear(in_dim_edges, self.edge_out_dim * num_heads, bias=use_bias)
                 # E_value will always be multi
                 self.E_value = nn.Linear(in_dim_edges, out_dim * num_heads, bias=use_bias)
 
@@ -105,7 +105,7 @@ class GraphiT_Layer(nn.Module):
                 Q = Q * scaling
 
         if self.use_edge_features:
-            E = e_att if self.share_edge_features else self.E(edge_features)  # [n_batch, num_nodes, num_nodes, out_dim * num_heads]
+            E = e_att if self.share_edge_features else self.E_att(edge_features)  # [n_batch, num_nodes, num_nodes, out_dim * num_heads]
             E = E.view(n_batch, num_nodes, num_nodes, self.num_heads, -1)  # [n_batch, num_nodes, num_nodes, num_heads, out_dim or 1]
             if self.QK_op == 'multiplication':
                 if self.KE_op == 'multiplication':  # Attention is Q . K . E
