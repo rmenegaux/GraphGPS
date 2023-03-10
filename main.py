@@ -174,7 +174,7 @@ if __name__ == '__main__':
         # From: /scratch2/clear/ejehanno/models_weights/zinc-GraphiT_EJ_tests-Q+K+E_multi*V*E_multi_DptConn_noHeads_4seeds_fullEP_doubleScaling
         # extracted_path = os.path.join(extracted_path, os.listdir(extracted_path)[0])
         weights_dir = '/scratch2/clear/ejehanno/models_weights/'
-        run_dir = os.path.join(weights_dir, '/'.join(cfg.run_dir.split('/')[2:]))
+        run_dir = os.path.join(weights_dir, '/'.join(cfg.run_dir.split('/')[1:]))
         setattr(cfg, 'run_dir', run_dir)
 
         start_epoch = load_ckpt(model, optimizer, scheduler, -1)
