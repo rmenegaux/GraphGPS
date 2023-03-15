@@ -24,14 +24,14 @@ function run_repeats {
     echo "  output dir: ${out_dir}"
 
     # Run each repeat as a separate job
-    for SEED in {0..1}; do
-        script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 seed ${SEED} ${common_params}"
-        echo $script
-        eval $script
-    done
-    # script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 train.auto_resume True ${common_params}"
-    # echo $script
-    # eval $script
+    # for SEED in {0..3}; do
+    #     script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 seed ${SEED} ${common_params}"
+    #     echo $script
+    #     eval $script
+    # done
+    script="sbatch -J ${cfg_suffix}-${dataset} --error=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out --output=/gpfswork/rech/tbr/ump88gx/EJ_logs/%j.out run/wrapper.sb ${main} --repeat 1 train.auto_resume True ${common_params}"
+    echo $script
+    eval $script
 }
 
 
