@@ -181,7 +181,7 @@ if __name__ == '__main__':
         print(f'WEIGHTS LOADED FROM EP {start_epoch}')
         # One time Inference to get the attention scores
         scores, E_att, E_value, batch = eval_epoch(loggers[2], loaders[2], model, split='test')
-        res_dir = f'/scratch2/clear/ejehanno/extracted/{cfg.wandb.name}'
+        res_dir = f'/scratch2/clear/ejehanno/extracted/{cfg.wandb.name}_rwse'
         if not os.path.exists(res_dir):
             os.makedirs(res_dir)
         torch.save(scores, f'{res_dir}/scores.pt')

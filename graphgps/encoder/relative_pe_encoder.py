@@ -251,6 +251,8 @@ class RWSEEdgeEncoder(torch.nn.Module):
         if self.add_dense_edge_features:
             # Maybe directly concatenate this instead, as for NodePE?
             batch.edge_dense = batched_edge_features
+        batch.saved_RWSE_batch = batch
+        batch.batched_edge_features = batched_edge_features
 
 
         return batch
