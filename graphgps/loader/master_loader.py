@@ -357,7 +357,7 @@ def preformat_OGB_Graph(dataset_dir, name):
             data.x = torch.zeros(data.num_nodes, dtype=torch.long)
             return data
         dataset.transform = add_zeros
-    elif name == 'ogbg-molpcba':
+    elif name == 'ogbg-molpcba' or name == 'ogbg-molhiv':
         # Subset graphs to a maximum size (number of nodes) limit.
         # This affects only very few graphs, which crash GPU memory in GraphiT
         pre_transform_in_memory(dataset, partial(clip_graphs_to_size,
@@ -448,8 +448,7 @@ def preformat_OGB_PCQM4Mv2(dataset_dir, name):
     else:
         raise ValueError(f'Unexpected OGB PCQM4Mv2 subset choice: {name}')
     dataset.split_idxs = split_idxs
-    pre_transform_in_memory(dataset, partial(clip_graphs_to_size,
-                                             size_limit=63)) 
+
     return dataset
 
 

@@ -168,12 +168,12 @@ class SPDEdgeEncoder(torch.nn.Module):
     def forward(self, batch):
         # Shifting lengths by 1 and adding 0s on the diagonal to distinguish
         # non-connected nodes from self-connections
-        batch.spd_index, batch.spd_lengths = add_self_loops(
-            batch.spd_index, batch.spd_lengths + 1, fill_value=0)
+        # batch.spd_index, batch.spd_lengths = add_self_loops(
+        #    batch.spd_index, batch.spd_lengths + 1, fill_value=0)
         # Doing things in this order (first embedding, then transforming to dense,
         # ensures that padding remains 0)
-        spd_embedding = self.encoder(batch.spd_lengths)
-        spd_dense = to_dense_adj(batch.spd_index, batch=batch.batch, edge_attr=spd_embedding)
+        spd_dense = self.encoder(batch.spd_lengths)
+        spd_dense = reshape_flattened_adj(spd_dense, batch.batch)
 
         batch_idx, row, col = get_dense_indices_from_sparse(batch.edge_index, batch.batch)
         batch.edge_attr = spd_dense[batch_idx, row, col]

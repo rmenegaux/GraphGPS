@@ -23,7 +23,6 @@ def pre_transform_in_memory(dataset, transform_func, show_progress=False):
     """
     if transform_func is None:
         return dataset
-
     data_list = [transform_func(dataset.get(i))
                  for i in tqdm(range(len(dataset)),
                                disable=not show_progress,
@@ -32,7 +31,7 @@ def pre_transform_in_memory(dataset, transform_func, show_progress=False):
     data_list = list(filter(None, data_list))
 
     dataset._indices = None
-    dataset._data_list = data_list
+    dataset._data_list = None
     dataset.data, dataset.slices = dataset.collate(data_list)
 
 
@@ -80,8 +79,40 @@ def clip_graphs_to_size(data, size_limit=5000):
             data.edge_attr = edge_attr
         return data
 
-
 def compute_shortest_paths(data, config):
+    '''
+    Compute shortest-path distance between all nodes.
+    Fairly optimized algorithm for dense graphs, matrix products
+    '''
+    from torch_geometric.utils import to_dense_adj, dense_to_sparse
+
+    if data.edge_index.numel() == 0:
+        # data.spd_index, data.spd_lengths = data.edge_index, data.edge_index[0]
+        data.spd_lengths = data.edge_index[0]
+        return data
+
+    A = to_dense_adj(data.edge_index).squeeze().long()
+    S = A # shortest path matrix
+    An = A # Random walk matrix
+    # We choose to keep the torch geometric sparse format
+    for step in range(1, config.spd_max_length):
+        An = 1 * (A@An > 0)
+        # If (i,j) is nonzero for An and is zero in S (never been reached before),
+        # then spd(i,j) = step + 1
+        S += (S == 0) * An * (step + 1)
+        # Finish if all pairs have been reached
+        if (S > 0).all():
+            break
+    # Give value of 1 for non-reachable nodes, 0 for the diagonal, spd+1 for all other pairs     
+    S += 1 
+    S = S.fill_diagonal_(0)
+    # data.spd_index, data.spd_lengths = dense_to_sparse(S)
+    data.spd_lengths = S.reshape(len(A)**2)
+    
+    return data
+
+
+def compute_shortest_paths_sparse(data, config):
     import networkx as nx
     from torch_geometric.utils import to_networkx
 
