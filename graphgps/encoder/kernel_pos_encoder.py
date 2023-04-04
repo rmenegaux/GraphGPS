@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.register import register_node_encoder
+from torch_geometric.utils import to_dense_batch
 
 
 class KernelPENodeEncoder(torch.nn.Module):
@@ -34,14 +35,15 @@ class KernelPENodeEncoder(torch.nn.Module):
         dim_in = cfg.share.dim_in  # Expected original input node features dim
 
         pecfg = getattr(cfg, f"posenc_{self.kernel_type}")
-        dim_pe = pecfg.dim_pe  # Size of the kernel-based PE embedding
+        # dim_pe = pecfg.dim_pe  # Size of the kernel-based PE embedding
+        dim_pe = dim_emb  # Size of the kernel-based PE embedding
         num_rw_steps = len(pecfg.kernel.times)
         model_type = pecfg.model.lower()  # Encoder NN model type for PEs
         n_layers = pecfg.layers  # Num. layers in PE encoder model
         norm_type = pecfg.raw_norm_type.lower()  # Raw PE normalization layer type
         self.pass_as_var = pecfg.pass_as_var  # Pass PE also as a separate variable
 
-        if dim_emb - dim_pe < 1:
+        if dim_emb - dim_pe < -1:
             raise ValueError(f"PE dim size {dim_pe} is too large for "
                              f"desired embedding size of {dim_emb}.")
 
@@ -84,9 +86,12 @@ class KernelPENodeEncoder(torch.nn.Module):
 
         pos_enc = getattr(batch, pestat_var)  # (Num nodes) x (Num kernel times)
         # pos_enc = batch.rw_landing  # (Num nodes) x (Num kernel times)
+        pos_enc, mask = to_dense_batch(pos_enc, batch.batch)
         if self.raw_norm:
-            pos_enc = self.raw_norm(pos_enc)
+            pos_enc = self.raw_norm(pos_enc.transpose(1,2)).transpose(1,2)
         pos_enc = self.pe_encoder(pos_enc)  # (Num nodes) x dim_pe
+        # shenanigans to ensure comparison with old code
+        pos_enc = pos_enc[mask]
 
         # Expand node features if needed
         if self.expand_x:
@@ -94,7 +99,8 @@ class KernelPENodeEncoder(torch.nn.Module):
         else:
             h = batch.x
         # Concatenate final PEs to input embedding
-        batch.x = torch.cat((h, pos_enc), 1)
+        # batch.x = torch.cat((h, pos_enc), 1)
+        batch.x = h + pos_enc
         # Keep PE also separate in a variable (e.g. for skip connections to input)
         if self.pass_as_var:
             setattr(batch, f'pe_{self.kernel_type}', pos_enc)

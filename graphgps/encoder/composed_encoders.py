@@ -50,7 +50,8 @@ def concat_node_encoders(encoder_classes, pe_enc_names):
                 # PE dims can only be gathered once the cfg is loaded.
                 enc2_dim_pe = getattr(cfg, f"posenc_{self.enc2_name}").dim_pe
             
-                self.encoder1 = self.enc1_cls(dim_emb - enc2_dim_pe)
+                # self.encoder1 = self.enc1_cls(dim_emb - enc2_dim_pe)
+                self.encoder1 = self.enc1_cls(dim_emb)
                 self.encoder2 = self.enc2_cls(dim_emb, expand_x=False)
 
         def forward(self, batch):
