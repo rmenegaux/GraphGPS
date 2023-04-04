@@ -96,6 +96,14 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
         data.pestat_RWSE = rw_landing
         if cfg.posenc_RWSE.enable_edges:
             data.edge_RWSE = rw_landing_all
+        from graphgps.transform.positional_encoding import MultiRWAttentionPE, RandomWalkNodePE
+        node_pe = RandomWalkNodePE(p_steps=max(kernel_param.times))
+        attention_pe = MultiRWAttentionPE(p_steps=max(kernel_param.times), beta=1)
+        pestat_RWSE = node_pe(data)
+        edge_RWSE = attention_pe(data)
+        import pdb; pdb.set_trace()
+        compare = 0
+
 
     # Heat Kernels.
     if 'HKdiagSE' in pe_types or 'HKfullPE' in pe_types:

@@ -15,15 +15,17 @@ dataset:
   node_encoder_num_types: 28
   node_encoder_bn: False
   edge_encoder: True
-  edge_encoder_name: TypeDictEdge+None
+  edge_encoder_name: TypeDictEdge+SPDE
   edge_encoder_shared: True
   edge_encoder_num_types: 4
   edge_encoder_bn: False
+  spd: True
+  spd_max_length: 16
   rings: False
   rings_max_length: 18
   rings_coalesce_edges: True
 posenc_RWSE:
-  enable: False
+  enable: True
   kernel:
     times_func: range(1,21)
   model: Linear
@@ -38,7 +40,7 @@ model:
   type: GPSModel
   loss_fun: l1
   edge_decoding: dot
-  graph_pooling: add
+  graph_pooling: first
 gt:
   layer_type: None+GraphiT  # CustomGatedGCN+Performer
   layers: 10
