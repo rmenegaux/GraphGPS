@@ -24,16 +24,14 @@ def pre_transform_in_memory(dataset, transform_func, show_progress=False):
     if transform_func is None:
         return dataset
 
-    data_list = [transform_func(dataset.get(i))
-                 for i in tqdm(range(len(dataset)),
-                               disable=not show_progress,
-                               mininterval=10,
-                               miniters=len(dataset)//20)]
-    data_list = list(filter(None, data_list))
-
+    for i in tqdm(range(len(dataset)),
+                  disable=not show_progress,
+                  mininterval=10,
+                  miniters=len(dataset)//20):
+        dataset._data_list[i] = transform_func(dataset.get(i))
+        
+    # dataset._data_list = list(filter(None, dataset._data_list))
     dataset._indices = None
-    dataset._data_list = data_list
-    dataset.data, dataset.slices = dataset.collate(data_list)
 
 
 def typecast_x(data, type_str):
@@ -81,7 +79,7 @@ def clip_graphs_to_size(data, size_limit=5000):
         return data
 
 
-def compute_shortest_paths(data, config):
+def compute_shortest_paths_sparse(data, config):
     import networkx as nx
     from torch_geometric.utils import to_networkx
 
@@ -99,6 +97,34 @@ def compute_shortest_paths(data, config):
             data.spd_index[0][i], data.spd_index[1][i] = source, target
             data.spd_lengths[i] = length
             i += 1
+    
+    return data
+
+def compute_shortest_paths(data, config):
+    '''
+    Compute shortest-path distance between all nodes.
+    Fairly optimized algorithm for dense graphs, matrix products
+    '''
+    from torch_geometric.utils import to_dense_adj, dense_to_sparse
+
+    if data.edge_index.numel() == 0:
+        data.spd_index, data.spd_lengths = data.edge_index, data.edge_index[0]
+        return data
+
+    A = to_dense_adj(data.edge_index).squeeze().long()
+    S = A # shortest path matrix
+    An = A # Random walk matrix
+    # We choose to keep the torch geometric sparse format
+    for step in range(1, config.spd_max_length):
+        An = 1 * (A@An > 0)
+        # If (i,j) is nonzero for An and is zero in S (never been reached before),
+        # then spd(i,j) = step + 1
+        S += (S == 0) * An * (step + 1)
+        # Finish if all pairs have been reached
+        if (S > 0).all():
+            break
+    S = S.fill_diagonal_(0)
+    data.spd_index, data.spd_lengths = dense_to_sparse(S)
     
     return data
 

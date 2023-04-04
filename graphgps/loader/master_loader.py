@@ -2,6 +2,7 @@ import logging
 import os.path as osp
 import time
 from functools import partial
+from tqdm import tqdm
 
 import numpy as np
 import torch
@@ -174,6 +175,18 @@ def load_dataset_master(format, name, dataset_dir):
         raise ValueError(f"Unknown data format: {format}")
     log_loaded_dataset(dataset, format, name)
 
+    # Convert to list
+    logging.info(f"Converting collated data to list for transforms")
+    start = time.perf_counter() 
+    # dataset._data_list = [dataset[i] for i in range(len(dataset))]
+    dataset._data_list = [dataset[i] for i in tqdm(range(len(dataset)),
+                  mininterval=10,
+                  miniters=len(dataset)//20)]
+    elapsed = time.perf_counter() - start
+    timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
+                + f'{elapsed:.2f}'[-3:]
+    logging.info(f"Done! Took {timestr}")
+
     # Precompute necessary statistics for positional encodings.
     pe_enabled_list = []
     for key, pecfg in cfg.items():
@@ -238,6 +251,14 @@ def load_dataset_master(format, name, dataset_dir):
                   + f'{elapsed:.2f}'[-3:]
         logging.info(f"Done! Took {timestr}")
 
+    logging.info(f"Collating transformed dataset")
+    start = time.perf_counter()
+    dataset._indices = None
+    dataset.data, dataset.slices = dataset.collate(dataset._data_list)
+    elapsed = time.perf_counter() - start
+    timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
+                    + f'{elapsed:.2f}'[-3:]
+    logging.info(f"Done! Took {timestr}")
     # Set standard dataset train/val/test splits
     if hasattr(dataset, 'split_idxs'):
         set_dataset_splits(dataset, dataset.split_idxs)
@@ -448,8 +469,7 @@ def preformat_OGB_PCQM4Mv2(dataset_dir, name):
     else:
         raise ValueError(f'Unexpected OGB PCQM4Mv2 subset choice: {name}')
     dataset.split_idxs = split_idxs
-    pre_transform_in_memory(dataset, partial(clip_graphs_to_size,
-                                             size_limit=63)) 
+
     return dataset
 
 
