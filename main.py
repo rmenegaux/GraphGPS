@@ -149,6 +149,7 @@ if __name__ == '__main__':
                      f"split_index={cfg.dataset.split_index}")
         logging.info(f"    Starting now: {datetime.datetime.now()}")
         # Set machine learning pipeline
+        import pdb; pdb.set_trace()
         loaders = create_loader()
         loggers = create_logger()
         model = create_model()
