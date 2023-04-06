@@ -179,9 +179,11 @@ def load_dataset_master(format, name, dataset_dir):
     logging.info(f"Converting collated data to list for transforms")
     start = time.perf_counter() 
     # dataset._data_list = [dataset[i] for i in range(len(dataset))]
-    dataset._data_list = [dataset[i] for i in tqdm(range(len(dataset)),
+    data_list = [dataset[i] for i in tqdm(range(len(dataset)),
                   mininterval=10,
                   miniters=len(dataset)//20)]
+    # Erase the large Data object
+    dataset.data, dataset.slices = Data(y=dataset.data.y), None
     elapsed = time.perf_counter() - start
     timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
                 + f'{elapsed:.2f}'[-3:]
@@ -226,7 +228,7 @@ def load_dataset_master(format, name, dataset_dir):
         start = time.perf_counter()
         logging.info(f"Adding shortest path distance up to length: "
                      f"{cfg.dataset.spd_max_length} for all graphs...")
-        pre_transform_in_memory(dataset,
+        data_list = pre_transform_in_memory(data_list,
                                 partial(compute_shortest_paths, config=cfg.dataset),
                                 show_progress=True
                                 )
@@ -242,7 +244,7 @@ def load_dataset_master(format, name, dataset_dir):
         start = time.perf_counter()
         logging.info(f"Adding rings up to size: "
                      f"{cfg.dataset.rings_max_length} for all graphs...")
-        pre_transform_in_memory(dataset,
+        data_list = pre_transform_in_memory(data_list,
                                 partial(add_rings, config=cfg.dataset),
                                 show_progress=True
                                 )
@@ -251,14 +253,6 @@ def load_dataset_master(format, name, dataset_dir):
                   + f'{elapsed:.2f}'[-3:]
         logging.info(f"Done! Took {timestr}")
 
-    logging.info(f"Collating transformed dataset")
-    start = time.perf_counter()
-    dataset._indices = None
-    dataset.data, dataset.slices = dataset.collate(dataset._data_list)
-    elapsed = time.perf_counter() - start
-    timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
-                    + f'{elapsed:.2f}'[-3:]
-    logging.info(f"Done! Took {timestr}")
     # Set standard dataset train/val/test splits
     if hasattr(dataset, 'split_idxs'):
         set_dataset_splits(dataset, dataset.split_idxs)
@@ -468,6 +462,7 @@ def preformat_OGB_PCQM4Mv2(dataset_dir, name):
                       list(range(n1 + n2, n1 + n2 + n3))]
     else:
         raise ValueError(f'Unexpected OGB PCQM4Mv2 subset choice: {name}')
+    dataset = CustomDataset(dataset)
     dataset.split_idxs = split_idxs
 
     return dataset
