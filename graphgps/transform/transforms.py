@@ -79,6 +79,7 @@ def clip_graphs_to_size(data, size_limit=5000):
             data.edge_attr = edge_attr
         return data
 
+
 def compute_shortest_paths(data, config):
     '''
     Compute shortest-path distance between all nodes.
@@ -87,11 +88,13 @@ def compute_shortest_paths(data, config):
     from torch_geometric.utils import to_dense_adj, dense_to_sparse
 
     if data.edge_index.numel() == 0:
-        # data.spd_index, data.spd_lengths = data.edge_index, data.edge_index[0]
-        data.spd_lengths = data.edge_index[0]
-        return data
-
-    A = to_dense_adj(data.edge_index).squeeze().long()
+        if hasattr(data, 'num_nodes'):
+            N = data.num_nodes  # Explicitly given number of nodes, e.g. ogbg-ppa
+        else:
+            N = data.x.shape[0]
+        A = data.edge_index.new_zeros((N,N))
+    else:
+        A = to_dense_adj(data.edge_index).squeeze().long()
     S = A # shortest path matrix
     An = A # Random walk matrix
     # We choose to keep the torch geometric sparse format
@@ -103,12 +106,9 @@ def compute_shortest_paths(data, config):
         # Finish if all pairs have been reached
         if (S > 0).all():
             break
-    # Give value of 1 for non-reachable nodes, 0 for the diagonal, spd+1 for all other pairs     
-    S += 1 
     S = S.fill_diagonal_(0)
-    # data.spd_index, data.spd_lengths = dense_to_sparse(S)
-    data.spd_lengths = S.reshape(len(A)**2)
-    
+    data.spd_index, data.spd_lengths = dense_to_sparse(S)
+
     return data
 
 
