@@ -131,6 +131,7 @@ def load_dataset_master(format, name, dataset_dir):
 
         elif pyg_dataset_id == 'ZINC':
             dataset = preformat_ZINC(dataset_dir, name)
+            return dataset
             
         elif pyg_dataset_id == 'AQSOL':
             dataset = preformat_AQSOL(dataset_dir, name)
@@ -550,7 +551,7 @@ def preformat_TUDataset(dataset_dir, name):
     return dataset
 
 
-def preformat_ZINC(dataset_dir, name):
+def preformat_ZINC_standard(dataset_dir, name):
     """Load and preformat ZINC datasets.
 
     Args:
@@ -568,6 +569,69 @@ def preformat_ZINC(dataset_dir, name):
     )
     return dataset
 
+def preformat_ZINC(dataset_dir, name):
+    """Load and preformat ZINC datasets.
+
+    Args:
+        dataset_dir: path where to store the cached dataset
+        name: select 'subset' or 'full' version of ZINC
+
+    Returns:
+        PyG dataset object
+    """
+    if name not in ['subset', 'full']:
+        raise ValueError(f"Unexpected subset choice for ZINC dataset: {name}")
+    
+    from graphgps.loader.custom_loader import GraphDataset
+    trainset, valset, testset = (
+        GraphDataset(ZINC(root=dataset_dir, subset=(name == 'subset'), split=split))
+            for split in ['train', 'val', 'test'])
+
+    from graphgps.transform.positional_encoding import NodePositionalEmbeddings, AttentionPositionalEmbeddings
+    # Initialize node positional embeddings
+    print('Initializing node positional embeddings')
+    if '+' in cfg.dataset.node_encoder_name:
+        node_pe_name = cfg.dataset.node_encoder_name.split('+')[1]
+        node_pe_params = {
+            'p_steps': cfg.posenc_RWSE.dim_pe
+        }
+        NodePE = NodePositionalEmbeddings[node_pe_name](**node_pe_params)
+        logging.info(str(NodePE))
+        trainset.compute_node_pe(NodePE, standardize=False, update_stats=False)
+        valset.compute_node_pe(NodePE, standardize=False, update_stats=False)
+        testset.compute_node_pe(NodePE, standardize=False, update_stats=False)
+    else:
+        # say use_node_pe = False in cfg
+        pass
+    # Pre-compute attention relative positional embeddings
+    print('Initializing relative positional embeddings')
+    if '+' in cfg.dataset.edge_encoder_name:
+        edge_pe_name = cfg.dataset.edge_encoder_name.split('+')[1]
+        if (edge_pe_name not in AttentionPositionalEmbeddings.keys()):
+            print('{} is not a recognized attention positional embedding, defaulting to none')
+            pass
+        else:
+            attention_pe_params = {
+                'SPDE': {
+                    'max_steps': cfg.dataset.spd_max_length
+                },
+                'RWSE': {
+                    "zero_diag": False,
+                    "p_steps": cfg.posenc_RWSE.dim_pe,
+                    "beta": 1
+                },
+            }[edge_pe_name]
+            AttentionPE = AttentionPositionalEmbeddings[edge_pe_name](**attention_pe_params)
+            logging.info(str(AttentionPE))
+            trainset.compute_attention_pe(AttentionPE, standardize=False, update_stats=False)
+            valset.compute_attention_pe(AttentionPE, standardize=False, update_stats=False)
+            testset.compute_attention_pe(AttentionPE, standardize=False, update_stats=False)
+            
+    if cfg.dataset.rings == True:
+        print('Adding ring information')
+        for dset in [trainset, valset, testset]:
+            dset.add_rings(max_k=cfg.dataset.rings_max_length)
+    return [trainset, valset, testset]
 
 def preformat_AQSOL(dataset_dir):
     """Load and preformat AQSOL datasets.

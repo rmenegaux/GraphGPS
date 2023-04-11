@@ -73,6 +73,39 @@ def custom_set_run_dir(cfg, run_id):
     else:
         makedirs_rm_exist(cfg.run_dir)
 
+def custom_create_loader():
+    from torch.utils.data import DataLoader
+    from torch_geometric.graphgym.loader import load_dataset
+
+    if cfg.dataset.format == 'PyG-ZINC':
+        dataset = load_dataset()
+        pw = cfg.num_workers > 0
+        loaders = [
+            DataLoader(
+                dset, num_workers=cfg.num_workers, batch_size=cfg.train.batch_size,
+                shuffle=shuffle, collate_fn=dset.collate_fn(),
+                pin_memory=True, persistent_workers=pw)
+            for dset, shuffle in zip(dataset, [True, False, False])
+        ]
+            # get dim_in and dim_out
+        try:
+            cfg.share.dim_in = dataset[0][0].x.shape[1]
+        except Exception:
+            cfg.share.dim_in = 1
+        try:
+            if cfg.dataset.task_type == 'classification':
+                cfg.share.dim_out = torch.unique([g.y for g in dataset[0]]).shape[0]
+            else:
+                cfg.share.dim_out = dataset[0][0].y.shape[1]
+        except Exception:
+            cfg.share.dim_out = 1
+
+        # count number of dataset splits
+        cfg.share.num_splits = 3
+    else:
+        loaders = create_loader()
+    return loaders
+
 
 def run_loop_settings():
     """Create main loop execution settings based on the current cfg.
@@ -149,8 +182,8 @@ if __name__ == '__main__':
                      f"split_index={cfg.dataset.split_index}")
         logging.info(f"    Starting now: {datetime.datetime.now()}")
         # Set machine learning pipeline
-        import pdb; pdb.set_trace()
-        loaders = create_loader()
+        # loaders = create_loader()
+        loaders = custom_create_loader()
         loggers = create_logger()
         model = create_model()
         if cfg.pretrained.dir:

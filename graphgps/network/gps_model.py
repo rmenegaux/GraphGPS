@@ -8,7 +8,7 @@ from torch_geometric.graphgym.register import register_network
 from torch_geometric.utils import to_dense_batch
 
 from graphgps.layer.gps_layer import GPSLayer
-from graphgps.utils import CudaTimer
+# from graphgps.utils import CudaTimer
 
 
 def add_graph_token(data, token):

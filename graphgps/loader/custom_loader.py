@@ -3,6 +3,8 @@ from tqdm import tqdm
 from typing import Union, List
 import numpy as np
 from torch import Tensor
+import torch
+import copy
 
 from torch_geometric.data import Data
 from torch_geometric.data.data import BaseData
@@ -108,7 +110,6 @@ from collections.abc import Sequence
 from tqdm import tqdm
 import copy
 
-import torch.nn.functional as F
 from torch.utils.data.dataloader import default_collate
 from typing import Union, List
 import numpy as np
@@ -117,31 +118,40 @@ from torch_geometric.transforms import ToDense
 from torch_geometric.data import Data
 from torch_geometric.data.data import BaseData
 
-def CustomBatch(object):
-    def __init__(self):
-        self._add_rings = False
+
+class CustomBatch(object):
+    def __init__(self, add_rings=False, use_node_pe=True, use_attention_pe=True):
+        self._add_rings = add_rings
+        self.use_node_pe = use_node_pe
+        self.use_attention_pe = use_attention_pe
     
     def from_list(self, data_list):
         '''
         Initialize batch from list of torch geometric Data objects
         '''
         # with profiler.record_function("COLLATE FUNCTION"):
-        batch = list(batch)
+        batch = data_list
         max_len = max(len(g.x) for g in batch)
         dense_transform = ToDense(max_len)
         input_size = batch[0].x.shape[1]
-        edge_input_size = 1 if batch[0].edge_attr.dim() == 1 else batch[0].edge_attr.shape[1]
+        try:
+            edge_input_size = 1 if batch[0].edge_attr.dim() == 1 else batch[0].edge_attr.shape[1]
+        except:
+            import pdb; pdb.set_trace()
+            dummy = 0
 
         self.x = batch[0].x.new_zeros((len(batch), max_len, input_size))
-        self.edge_dense = batch[0].edge_attr.new_zeros((len(batch), max_len, max_len, edge_input_size), dtype=int).squeeze()
+        self.edge_dense = batch[0].edge_attr.new_zeros((len(batch), max_len, max_len, edge_input_size), dtype=int).squeeze(-1)
         self.mask = batch[0].edge_index.new_zeros((len(batch), max_len), dtype=bool)
         labels = []
         attention_pe = None
         padded_p = None
         if self.use_node_pe:
-            padded_p = torch.zeros((len(batch), max_len, self.node_pe_dimension), dtype=float)
+            node_pe_dimension = batch[0].node_pe.size(-1)
+            self.node_pe = torch.zeros((len(batch), max_len, node_pe_dimension))
         if self.use_attention_pe:
-            attention_pe = torch.zeros((len(batch), max_len, max_len, self.attention_pe_dim)).squeeze()
+            attention_pe_dimension = batch[0].attention_pe.size(-1) if batch[0].attention_pe.ndim == 3 else 1
+            self.edge_pe = torch.zeros((len(batch), max_len, max_len, attention_pe_dimension)).squeeze(-1)
 
         for i, g in enumerate(batch):
             labels.append(g.y.view(-1))
@@ -150,25 +160,36 @@ def CustomBatch(object):
             g.x = g.x + 1
             # edge_index = utils.add_self_loops(batch[i].edge_index, None, num_nodes =  max_len)[0]
             g = dense_transform(g)
-            padded_x[i] = g.x
+            self.x[i] = g.x
 
             # adj = utils.to_dense_adj(edge_index).squeeze()
             # FIXME: Adding 1 to the edge type here, to differentiate between padding and non-neighbors
-            padded_adj[i, :num_nodes, :num_nodes] = g.adj[:num_nodes, :num_nodes] + 1
+            self.edge_dense[i, :num_nodes, :num_nodes] = g.adj[:num_nodes, :num_nodes] + 1
             # FIXME: Creating new edge type for ring connections (hard coded for 4 edge types)
             if self._add_rings == True:
-                padded_adj[i, :num_nodes, :num_nodes] += 4 * g.ring_adj
+                self.edge_dense[i, :num_nodes, :num_nodes] += 4 * g.ring_adj
             # Adding a special edge type (2) for the diagonal
-            padded_adj[i, :num_nodes, :num_nodes] += (g.adj[:num_nodes, :num_nodes] > 0)
-            padded_adj[i, :num_nodes, :num_nodes].fill_diagonal_(2)
+            self.edge_dense[i, :num_nodes, :num_nodes] += (g.adj[:num_nodes, :num_nodes] > 0)
+            self.edge_dense[i, :num_nodes, :num_nodes].fill_diagonal_(2)
 
-            mask[i] = g.mask
+            self.mask[i] = g.mask
             if self.use_node_pe:
-                padded_p[i, :num_nodes] = g.node_pe
+                self.node_pe[i, :num_nodes] = g.node_pe
             if self.use_attention_pe:
-                attention_pe[i, :num_nodes, :num_nodes] = g.attention_pe
-        self.y = default_collate(labels)
-        return padded_x, padded_adj, padded_p, mask, attention_pe, default_collate(labels)
+                self.edge_pe[i, :num_nodes, :num_nodes] = g.attention_pe
+        self.y = default_collate(labels).squeeze(-1)
+
+        return self
+
+
+    def to(self, device):
+        '''
+        Function mimicking the Pytorch .to(device) functionality
+        '''
+        for tensor in ['x', 'edge_dense', 'node_pe', 'edge_pe', 'mask', 'y']:
+            tensor_value = getattr(self, tensor, None)
+            if tensor_value is not None:
+                setattr(self, tensor, tensor_value.to(device))
 
 
 class GraphDataset(object):
@@ -185,10 +206,13 @@ class GraphDataset(object):
         return len(self.dataset)
 
     def __getitem__(self, index):
-        return self.dataset[index]
+        return copy.copy(self.dataset[index])
 
     def add_rings(self, max_k=17):
-        for g in self.dataset:
+        for g in tqdm(self.dataset,
+                  mininterval=10,
+                  miniters=len(self)//20):
+        # for g in self.dataset:
             g.rings = get_rings(g.edge_index, max_k=max_k)
             g.ring_adj = torch.zeros((len(g.x), len(g.x)), dtype=int)
             for ring in g.rings:
@@ -204,7 +228,10 @@ class GraphDataset(object):
         Add node positional embeddings to the graphs' data.
         Takes as argument a function returning a nodewise positional embedding from a graph
         '''
-        for g in self.dataset:
+        # for g in self.dataset:
+        for g in tqdm(self.dataset,
+                  mininterval=10,
+                  miniters=len(self)//20):
             g.node_pe = node_pe(g, update_stats=update_stats)
         if standardize:
             mean, std = node_pe.get_statistics()
@@ -217,7 +244,10 @@ class GraphDataset(object):
         '''
         Takes as argument a function returning an edgewise positional embedding from a graph
         '''
-        for g in self.dataset:
+        # for g in self.dataset:
+        for g in tqdm(self.dataset,
+                  mininterval=10,
+                  miniters=len(self)//20):
             g.attention_pe = attention_pe(g, update_stats=update_stats)
         if standardize:
             for g in self.dataset:
@@ -229,48 +259,12 @@ class GraphDataset(object):
         def collate(batch):
             # with profiler.record_function("COLLATE FUNCTION"):
             batch = list(batch)
-            max_len = max(len(g.x) for g in batch)
-            dense_transform = ToDense(max_len)
-            input_size = batch[0].x.shape[1]
-            edge_input_size = 1 if batch[0].edge_attr.dim() == 1 else batch[0].edge_attr.shape[1]
-
-            padded_x = torch.zeros((len(batch), max_len, input_size), dtype=int)
-            padded_adj = torch.zeros((len(batch), max_len, max_len, edge_input_size), dtype=int).squeeze()
-            mask = torch.zeros((len(batch), max_len), dtype=bool)
-            labels = []
-            attention_pe = None
-            padded_p = None
-            if self.use_node_pe:
-                padded_p = torch.zeros((len(batch), max_len, self.node_pe_dimension), dtype=float)
-            if self.use_attention_pe:
-                attention_pe = torch.zeros((len(batch), max_len, max_len, self.attention_pe_dim)).squeeze()
-
-            for i, g in enumerate(batch):
-                labels.append(g.y.view(-1))
-                num_nodes = len(g.x)
-                # FIXME: Adding 1 to the atom type here, to differentiate between atom 0 and padding
-                g.x = g.x + 1
-                # edge_index = utils.add_self_loops(batch[i].edge_index, None, num_nodes =  max_len)[0]
-                g = dense_transform(g)
-                padded_x[i] = g.x
-
-                # adj = utils.to_dense_adj(edge_index).squeeze()
-                # FIXME: Adding 1 to the edge type here, to differentiate between padding and non-neighbors
-                padded_adj[i, :num_nodes, :num_nodes] = g.adj[:num_nodes, :num_nodes] + 1
-                # FIXME: Creating new edge type for ring connections (hard coded for 4 edge types)
-                if self._add_rings == True:
-                    padded_adj[i, :num_nodes, :num_nodes] += 4 * g.ring_adj
-                # Adding a special edge type (2) for the diagonal
-                padded_adj[i, :num_nodes, :num_nodes] += (g.adj[:num_nodes, :num_nodes] > 0)
-                padded_adj[i, :num_nodes, :num_nodes].fill_diagonal_(2)
-
-
-                mask[i] = g.mask
-                if self.use_node_pe:
-                    padded_p[i, :num_nodes] = g.node_pe
-                if self.use_attention_pe:
-                    attention_pe[i, :num_nodes, :num_nodes] = g.attention_pe
-            return padded_x, padded_adj, padded_p, mask, attention_pe, default_collate(labels)
+            custom_batch = CustomBatch(
+                add_rings=self._add_rings,
+                use_node_pe=self.use_node_pe,
+                use_attention_pe=self.use_attention_pe,
+            ).from_list(batch)
+            return custom_batch
         return collate
 
 

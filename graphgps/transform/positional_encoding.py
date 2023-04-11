@@ -401,16 +401,16 @@ def compute_shortest_paths(data, max_length=6):
 
 
 NodePositionalEmbeddings = {
-    'rand_walk': RandomWalkNodePE,
+    'RWSE': RandomWalkNodePE,
     'gckn': IterableNodePE
 }
 
 AttentionPositionalEmbeddings = {
     'rand_walk': RandomWalkAttentionPE,
     'edge_RW': EdgeRWAttentionPE,
-    'multi_RW': MultiRWAttentionPE,
+    'RWSE': MultiRWAttentionPE,
     'multi_diffusion': MultiDiffusionAttentionPE,
     'adj': AdjacencyAttentionPE,
     'diffusion': DiffusionAttentionPE,
-    'spde': SPDE,
+    'SPDE': SPDE,
 }
