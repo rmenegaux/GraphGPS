@@ -23,6 +23,8 @@ def pre_transform_in_memory(dataset, transform_func, show_progress=False):
     """
     if transform_func is None:
         return dataset
+    if dataset.__class__.__name__ == 'CustomDataset':
+        return custom_transform_in_memory(dataset, transform_func, show_progress=show_progress)
 
     for i in tqdm(range(len(dataset)),
                   disable=not show_progress,
@@ -30,8 +32,38 @@ def pre_transform_in_memory(dataset, transform_func, show_progress=False):
                   miniters=len(dataset)//20):
         dataset._data_list[i] = transform_func(dataset.get(i))
         
-    # dataset._data_list = list(filter(None, dataset._data_list))
+    data_list = [transform_func(dataset.get(i))
+                 for i in tqdm(range(len(dataset)),
+                               disable=not show_progress,
+                               mininterval=10,
+                               miniters=len(dataset)//20)]
+    data_list = list(filter(None, data_list))
+
     dataset._indices = None
+    dataset.data, dataset.slices = dataset.collate(data_list)
+
+
+def custom_transform_in_memory(dataset, transform_func, show_progress=False):
+    """Pre-transform already loaded PyG dataset object.
+
+    Apply transform function to a `CustomDataset` object so that
+    the transformed result is persistent for the lifespan of the object.
+    This means the result is not saved to disk, as what PyG's `pre_transform`
+    would do, but also the transform is applied only once and not at each
+    data access as what PyG's `transform` hook does.
+
+    Transform is performed in-place on the `data_list` attribute
+
+    Args:
+        dataset: PyG dataset object to modify
+        transform_func: transformation function to apply to each data example
+        show_progress: show tqdm progress bar
+    """
+    for i in tqdm(range(len(dataset)),
+                  disable=not show_progress,
+                  mininterval=10,
+                  miniters=len(dataset)//20):
+        dataset.data_list[i] = transform_func(dataset[i])
 
 
 def typecast_x(data, type_str):
@@ -108,10 +140,13 @@ def compute_shortest_paths(data, config):
     from torch_geometric.utils import to_dense_adj, dense_to_sparse
 
     if data.edge_index.numel() == 0:
-        data.spd_index, data.spd_lengths = data.edge_index, data.edge_index[0]
-        return data
-
-    A = to_dense_adj(data.edge_index).squeeze().long()
+        if hasattr(data, 'num_nodes'):
+            N = data.num_nodes  # Explicitly given number of nodes, e.g. ogbg-ppa
+        else:
+            N = data.x.shape[0]
+        A = data.edge_index.new_zeros((N,N))
+    else:
+        A = to_dense_adj(data.edge_index).squeeze().long()
     S = A # shortest path matrix
     An = A # Random walk matrix
     # We choose to keep the torch geometric sparse format

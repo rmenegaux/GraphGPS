@@ -175,20 +175,6 @@ def load_dataset_master(format, name, dataset_dir):
         raise ValueError(f"Unknown data format: {format}")
     log_loaded_dataset(dataset, format, name)
 
-    # Convert to list
-    logging.info(f"Converting collated data to list for transforms")
-    start = time.perf_counter() 
-    # dataset._data_list = [dataset[i] for i in range(len(dataset))]
-    data_list = [dataset[i] for i in tqdm(range(len(dataset)),
-                  mininterval=10,
-                  miniters=len(dataset)//20)]
-    # Erase the large Data object
-    dataset.data, dataset.slices = Data(y=dataset.data.y), None
-    elapsed = time.perf_counter() - start
-    timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
-                + f'{elapsed:.2f}'[-3:]
-    logging.info(f"Done! Took {timestr}")
-
     # Precompute necessary statistics for positional encodings.
     pe_enabled_list = []
     for key, pecfg in cfg.items():
@@ -434,6 +420,7 @@ def preformat_OGB_PCQM4Mv2(dataset_dir, name):
                       'make sure RDKit is installed.')
         raise e
 
+    from graphgps.loader.custom_loader import CustomDataset
 
     dataset = PygPCQM4Mv2Dataset(root=dataset_dir)
     split_idx = dataset.get_idx_split()
@@ -462,10 +449,18 @@ def preformat_OGB_PCQM4Mv2(dataset_dir, name):
                       list(range(n1 + n2, n1 + n2 + n3))]
     else:
         raise ValueError(f'Unexpected OGB PCQM4Mv2 subset choice: {name}')
-    dataset = CustomDataset(dataset)
-    dataset.split_idxs = split_idxs
+    # import pdb; pdb.set_trace()
+    start = time.perf_counter()
+    logging.info(f"Transforming dataset to list form to avoid duplicating memory:")
+    list_dataset = CustomDataset(dataset)
+    elapsed = time.perf_counter() - start
+    timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
+                + f'{elapsed:.2f}'[-3:]
+    logging.info(f"Done! Took {timestr}")
 
-    return dataset
+    list_dataset.split_idxs = split_idxs
+
+    return list_dataset
 
 
 def preformat_PCQM4Mv2Contact(dataset_dir, name):

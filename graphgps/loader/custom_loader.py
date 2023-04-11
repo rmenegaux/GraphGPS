@@ -1,26 +1,50 @@
-import torch
-import torch.nn.functional as F
-from torch.utils.data.dataloader import default_collate
-from typing import Any, Callable, List, Optional, Tuple, Union
+from collections.abc import Sequence
+from tqdm import tqdm
+from typing import Union, List
 import numpy as np
+from torch import Tensor
 
-from torch_geometric.transforms import ToDense
+from torch_geometric.data import Data
+from torch_geometric.data.data import BaseData
+
+IndexType = Union[slice, Tensor, np.ndarray, Sequence]
 
 
-
-def CustomDataset(self)
-    def __init__(self, pyg_dataset):
+class CustomDataset(object):
+    '''
+    Simplified version of a Dataset, with the argument `data_list` containing
+    Data objects. Made to avoid the collating (and hence duplicating) of data into
+    one big Data() object in the torch geometric InMemoryDataset object.
+    Replicates most functionalities necessary to the GraphGym framework
+    '''
+    def __init__(self, pyg_dataset, transform=None):
         # Extract data from dataset in list form
         self.data_list = [pyg_dataset[i] for i in tqdm(range(len(pyg_dataset)),
                   mininterval=10,
                   miniters=len(pyg_dataset)//20)]
+        # self.data_list = list(pyg_dataset)
         # self.data is maintained to withhold information such as split indices
         self.data, self.slices = Data(), None
+        self.transform = transform
+
+        # These are to ensure compatibility with the `log_loaded_dataset` function
+        if hasattr(pyg_dataset.data, 'num_nodes'):
+            self.data.num_nodes = pyg_dataset.data.num_nodes
+        elif hasattr(pyg_dataset.data, 'x'):
+            self.data.num_nodes = pyg_dataset.data.x.size(0)
+
+        self.num_node_features = pyg_dataset.num_node_features
+        self.num_edge_features = pyg_dataset.num_edge_features
+        if hasattr(pyg_dataset, 'num_tasks'):
+            self.num_tasks = pyg_dataset.num_tasks
+        if hasattr(pyg_dataset.data, 'y'):
+            self.data.y = pyg_dataset.data.y
+        # self.num_classes = pyg_dataset.num_classes
 
     def __getitem__(
         self,
         idx: Union[int, np.integer, IndexType],
-    ) -> Union['Dataset', BaseData]:
+    ) -> Union[List, BaseData]:
         r"""In case :obj:`idx` is of type integer, will return the data object
         at index :obj:`idx` (and transforms it in case :obj:`transform` is
         present).
@@ -31,19 +55,23 @@ def CustomDataset(self)
                 or (isinstance(idx, Tensor) and idx.dim() == 0)
                 or (isinstance(idx, np.ndarray) and np.isscalar(idx))):
 
-            data = self.get(self.indices()[idx])
+            data = copy.copy(self.data_list[idx])
             data = data if self.transform is None else self.transform(data)
             return data
 
         else:
             return self.index_select(idx)
 
-    def index_select(self, idx: IndexType) -> 'Dataset':
+    def __len__(self):
+        return len(self.data_list)
+
+    def index_select(self, idx: IndexType) -> List:
         r"""Creates a subset of the dataset from specified indices :obj:`idx`.
         Indices :obj:`idx` can be a slicing object, *e.g.*, :obj:`[2:5]`, a
         list, a tuple, or a :obj:`torch.Tensor` or :obj:`np.ndarray` of type
-        long or bool."""
-        indices = self.indices()
+        long or bool.
+        Returns a list of Data"""
+        indices = list(range(len(self)))
 
         if isinstance(idx, slice):
             indices = indices[idx]
@@ -71,18 +99,25 @@ def CustomDataset(self)
                 f"np.ndarray of dtype long or bool are valid indices (got "
                 f"'{type(idx).__name__}')")
 
-        dataset = copy.copy(self)
-        dataset._indices = indices
-        return dataset
-
-    def get(self, idx: int) -> Data:
-
-        return copy.copy(self.data_list[idx])
-
-        return data
+        return [self.data_list[i] for i in indices]
 
 
-def CustomBatch()
+import torch
+from torch import Tensor
+from collections.abc import Sequence
+from tqdm import tqdm
+import copy
+
+import torch.nn.functional as F
+from torch.utils.data.dataloader import default_collate
+from typing import Union, List
+import numpy as np
+
+from torch_geometric.transforms import ToDense
+from torch_geometric.data import Data
+from torch_geometric.data.data import BaseData
+
+def CustomBatch(object):
     def __init__(self):
         self._add_rings = False
     
@@ -135,9 +170,6 @@ def CustomBatch()
         self.y = default_collate(labels)
         return padded_x, padded_adj, padded_p, mask, attention_pe, default_collate(labels)
 
-
-
-def create_custom_loader(data_list, )
 
 class GraphDataset(object):
     def __init__(self, dataset):
