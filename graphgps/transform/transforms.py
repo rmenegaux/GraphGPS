@@ -164,6 +164,13 @@ def add_rings(data, config):
     return data
 
 def get_rings(edge_index, max_k=7):
+    '''
+    Code from https://github.com/twitter-research/cwn
+
+    Returns list of rings (chordless cycles) in the adjacency matrix `edge_index`
+    of length at most `max_k`.
+    Rings are returned as a list of the indices of all the nodes in the ring.
+    '''
     import graph_tool as gt
     import graph_tool.topology as top
     import networkx as nx

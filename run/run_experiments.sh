@@ -46,7 +46,7 @@ done
 ################################################################################
 
 # Comment-out runs that you don't want to submit.
-cfg_dir="configs/GPS"
+cfg_dir="configs/CSA"
 
 DATASET="zinc"
 # run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.10runs"
@@ -64,25 +64,8 @@ DATASET="pattern"
 run_repeats ${DATASET} GraphiT "name_tag GraphiTwRWSE.lr0005.10run"
 
 
-#DATASET="cluster"
-#run_repeats ${DATASET} GraphiT "name_tag GraphiTwRWSE.lr0005.10runs"
-
-
-# DATASET="ogbg-molhiv"
-# run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.GatedGCN+Trf.lyr10.wd-5.drp005.10run"
-
-
-# DATASET="ogbg-molpcba"
-# run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.dim384.meanpool.wBNposmlp1.wd-5.10runs"
-
-
-# DATASET="ogbg-code2"
-# run_repeats ${DATASET} GPS "name_tag GPSnoPE.GatedGCN+Perf.drp02.wd-5"
-
-
-# DATASET="ogbg-ppa"  # NOTE: for ogbg-ppa we need SBATCH --mem=48G
-# run_repeats ${DATASET} GPS "name_tag GPSnoPE.GatedGCN+Perf.lyr3.dim256.drp01.wd-5.10run"
-
+DATASET="cluster"
+run_repeats ${DATASET} GraphiT "name_tag GraphiTwRWSE.lr0005.10run"
 
 # DATASET="pcqm4m"  # NOTE: for PCQM4Mv2 we need SBATCH --mem=48G and up to 3days runtime; run only one repeat
 # run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.small.lyr5.dim304"
@@ -92,11 +75,3 @@ run_repeats ${DATASET} GraphiT "name_tag GraphiTwRWSE.lr0005.10run"
 # DATASET="malnettiny"
 # run_repeats ${DATASET} GPS-noPE  "name_tag GPS-noPE.GatedGCN+Perf.lyr5.dim64.10runs"
 # run_repeats ${DATASET} GPS-noPE  "name_tag GPS-noPE.GatedGCN+Trf.lyr5.dim64.bs4.bacc4.10run  train.batch_size 4 optim.batch_accumulation 4 gt.layer_type CustomGatedGCN+Transformer"
-
-
-################################################################################
-##### extra
-################################################################################
-cfg_dir="configs/SAN"
-DATASET="pattern"
-#run_repeats ${DATASET} SAN "name_tag SAN.LapPE.10run"

@@ -11,8 +11,7 @@ from torch_geometric.utils import to_dense_batch
 from graphgps.layer.gatedgcn_layer import GatedGCNLayer
 from graphgps.layer.gine_conv_layer import GINEConvESLapPE
 from graphgps.layer.bigbird_layer import SingleBigBirdLayer
-from graphgps.layer.graphit_layer import MultiHeadAttentionLayer
-from graphgps.utils import CudaTimer
+from graphgps.layer.csa_layer import MultiHeadAttentionLayer
 
 
 class GPSLayer(nn.Module):
@@ -23,7 +22,7 @@ class GPSLayer(nn.Module):
                  local_gnn_type, global_model_type, num_heads, act='relu',
                  pna_degrees=None, equivstable_pe=False, dropout=0.0,
                  attn_dropout=0.0, layer_norm=False, batch_norm=True,
-                 bigbird_cfg=None, graphiT_share=False):
+                 bigbird_cfg=None, csa_share=False):
         super().__init__()
 
         self.dim_h = dim_h
@@ -96,11 +95,11 @@ class GPSLayer(nn.Module):
             bigbird_cfg.n_heads = num_heads
             bigbird_cfg.dropout = dropout
             self.self_attn = SingleBigBirdLayer(bigbird_cfg)
-        elif global_model_type == "GraphiT":
+        elif global_model_type == "CSA":
             self.self_attn = MultiHeadAttentionLayer(
                 dim_h, dim_h, dim_h//num_heads, num_heads,
                 attn_dropout=self.attn_dropout,
-                share_edge_features=graphiT_share)
+                share_edge_features=csa_share)
             self.linear_attn = nn.Linear(dim_h, dim_h)
         else:
             raise ValueError(f"Unsupported global x-former model: "
@@ -181,8 +180,7 @@ class GPSLayer(nn.Module):
                 h_attn = self.self_attn(h_dense, mask=mask)[mask]
             elif self.global_model_type == 'BigBird':
                 h_attn = self.self_attn(h_dense, attention_mask=batch.attn_mask)
-            elif self.global_model_type == 'GraphiT':
-                # with CudaTimer('GraphiT layer total'):
+            elif self.global_model_type == 'CSA':
                 edge_dense = getattr(batch, 'edge_dense', None)
                 edge_att = getattr(batch, 'edge_attention', None)
                 edge_values = getattr(batch, 'edge_values', None)
@@ -193,7 +191,6 @@ class GPSLayer(nn.Module):
             else:
                 raise RuntimeError(f"Unexpected {self.global_model_type}")
 
-            # with CudaTimer('dropout+batchnorm'):
             h_attn = self.dropout_attn(h_attn)
             h_attn = h_in1 + h_attn  # Residual connection.
             if self.layer_norm:
@@ -202,7 +199,6 @@ class GPSLayer(nn.Module):
                 h_attn = self.norm1_attn(h_attn)
             h_out_list.append(h_attn)
 
-        # with CudaTimer('FF block'):
         # Combine local and global outputs.
         # h = torch.cat(h_out_list, dim=-1)
         h = sum(h_out_list)

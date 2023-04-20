@@ -39,9 +39,9 @@ def concat_edge_encoders(encoder_classes, pe_enc_names):
         def __init__(self, dim_emb):
             super().__init__()
             
-            # Only GraphiT layer uses dense edge features.
+            # Only CSA layer uses dense edge features.
             transformer_layer = cfg.gt.layer_type.split('+')[1]
-            self.add_dense_edge_features = (transformer_layer == 'GraphiT')
+            self.add_dense_edge_features = (transformer_layer == 'CSA')
             self.share_edge_features = cfg.dataset.edge_encoder_shared
             # Whether to add special features for bonds that are part of a ring.
             # if cfg.dataset.rings_coalesce_edges == True, 
@@ -119,7 +119,7 @@ for ds_enc_name, ds_enc_cls in edge_ds_encs.items():
 class SharedEdgeEncoder(torch.nn.Module):
     '''
     Transforms dense edge features into `edge_att` and `edge_value`.
-    To be shared among GraphiT layers.
+    To be shared among CSA layers.
 
     Supposes `batch.edge_dense` has been set.
     (`batch.edge_dense` set via the DenseEdgeEncoder or the RPE modules)
