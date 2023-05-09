@@ -171,6 +171,7 @@ if __name__ == '__main__':
         logging.info('Num parameters: %s', cfg.params)
         
         # Reload weights
+        import pdb;pdb.set_trace()
         # From: /scratch2/clear/ejehanno/models_weights/zinc-GraphiT_EJ_tests-Q+K+E_multi*V*E_multi_DptConn_noHeads_4seeds_fullEP_doubleScaling
         # extracted_path = os.path.join(extracted_path, os.listdir(extracted_path)[0])
         weights_dir = '/scratch2/clear/ejehanno/models_weights/'
